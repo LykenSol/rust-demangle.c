@@ -452,7 +452,6 @@ demangle_path (struct rust_demangler *rdm, int in_value)
       CHECK_OR (IS_LOWER (ns) || IS_UPPER (ns), return );
 
       demangle_path (rdm, in_value);
-      PRINT ("::");
 
       dis = parse_disambiguator (rdm);
       name = parse_ident (rdm);
@@ -460,7 +459,7 @@ demangle_path (struct rust_demangler *rdm, int in_value)
       if (IS_UPPER (ns))
         {
           /* Special namespaces, like closures and shims. */
-          PRINT ("{");
+          PRINT ("::{");
           switch (ns)
             {
             case 'C':
@@ -482,8 +481,15 @@ demangle_path (struct rust_demangler *rdm, int in_value)
           PRINT ("}");
         }
       else
-        /* Implementation-specific/unspecified namespaces. */
-        print_ident (rdm, name);
+        {
+          /* Implementation-specific/unspecified namespaces. */
+
+          if (name.ascii || name.punycode)
+            {
+              PRINT ("::");
+              print_ident (rdm, name);
+            }
+        }
       break;
     case 'M':
     case 'X':
@@ -836,7 +842,7 @@ demangle_dyn_trait (struct rust_demangler *rdm)
 
       name = parse_ident (rdm);
       print_ident (rdm, name);
-      PRINT ("=");
+      PRINT (" = ");
       demangle_type (rdm);
     }
 
