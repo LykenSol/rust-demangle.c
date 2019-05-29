@@ -146,6 +146,9 @@ parse_ident (struct rust_demangler *rdm)
     while (IS_DIGIT (peek (rdm)))
       len = len * 10 + (next (rdm) - '0');
 
+  /* Skip past the optional `_` separator. */
+  eat (rdm, '_');
+
   start = rdm->next;
   rdm->next += len;
   /* Check for overflows. */
@@ -277,8 +280,8 @@ print_ident (struct rust_demangler *rdm, struct rust_mangled_ident ident)
 
           if (IS_LOWER (d))
             d = d - 'a';
-          else if (d >= 'A' && d <= 'J')
-            d = 26 + (d - 'A');
+          else if (d >= '0' && d <= '9')
+            d = 26 + (d - '0');
           else
             ERROR_AND (goto cleanup);
 
@@ -430,15 +433,6 @@ demangle_path (struct rust_demangler *rdm, int in_value)
       dis = parse_disambiguator (rdm);
       name = parse_ident (rdm);
 
-      if (!name.punycode)
-        {
-          /* Unescape `_[0-9_]`. */
-          if (name.ascii_len > 1 && name.ascii[0] == '_')
-            {
-              name.ascii++;
-              name.ascii_len--;
-            }
-        }
       print_ident (rdm, name);
       if (rdm->verbose)
         {
