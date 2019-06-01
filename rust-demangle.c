@@ -3,17 +3,17 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Public Rust Demangler API. */
+#define IS_DIGIT(c) ((c) >= '0' && (c) <= '9')
+#define IS_UPPER(c) ((c) >= 'A' && (c) <= 'Z')
+#define IS_LOWER(c) ((c) >= 'a' && (c) <= 'z')
+
+/* Public Rust Demangler API (non-legacy, v0 onward). */
 typedef void (*rust_demangler_callback) (void *, const char *, size_t);
 int rust_demangle_with_callback (const char *mangled, void *callback_opaque,
                                  rust_demangler_callback callback);
 char *rust_demangle (const char *mangled);
 
-/* Rust Demangler implementation. */
-
-#define IS_DIGIT(c) ((c) >= '0' && (c) <= '9')
-#define IS_UPPER(c) ((c) >= 'A' && (c) <= 'Z')
-#define IS_LOWER(c) ((c) >= 'a' && (c) <= 'z')
+/* Rust Demangler implementation (non-legacy, v0 onward). */
 
 struct rust_demangler
 {
@@ -36,10 +36,14 @@ struct rust_demangler
       rdm->errored = 1;                                                       \
       x;                                                                      \
     }                                                                         \
-  while (0);
+  while (0)
 #define CHECK_OR(cond, x)                                                     \
-  if (!(cond))                                                                \
-    ERROR_AND (x);
+  do                                                                          \
+    {                                                                         \
+      if (!(cond))                                                            \
+        ERROR_AND (x);                                                        \
+    }                                                                         \
+  while (0)
 
 /* Parsing functions. */
 
@@ -527,7 +531,7 @@ demangle_path (struct rust_demangler *rdm, int in_value)
         }
       break;
     default:
-      ERROR_AND (return )
+      ERROR_AND (return );
     }
 }
 
