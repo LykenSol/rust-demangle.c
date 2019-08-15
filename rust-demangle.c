@@ -284,7 +284,7 @@ print_ident (struct rust_demangler *rdm, struct rust_mangled_ident ident)
 
           if (IS_LOWER (d))
             d = d - 'a';
-          else if (d >= '0' && d <= '9')
+          else if (IS_DIGIT (d))
             d = 26 + (d - '0');
           else
             ERROR_AND (goto cleanup);
@@ -915,7 +915,7 @@ demangle_const_uint (struct rust_demangler *rdm)
       c = next (rdm);
       if (IS_DIGIT (c))
         value |= c - '0';
-      else if (IS_LOWER (c))
+      else if (c >= 'a' && c <= 'f')
         value |= 10 + (c - 'a');
       else
         ERROR_AND (return );
