@@ -1,3 +1,5 @@
+/* Some dependencies (FIXME: categorize based on what libiberty needs/has). */
+
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,13 +9,16 @@
 #define IS_UPPER(c) ((c) >= 'A' && (c) <= 'Z')
 #define IS_LOWER(c) ((c) >= 'a' && (c) <= 'z')
 
-/* Public Rust Demangler API (non-legacy, v0 onward). */
-typedef void (*rust_demangler_callback) (void *, const char *, size_t);
-int rust_demangle_with_callback (const char *mangled, void *callback_opaque,
-                                 rust_demangler_callback callback);
-char *rust_demangle (const char *mangled);
+#define DMGL_VERBOSE (1 << 3)
+typedef void (*demangle_callbackref) (const char *, size_t, void *);
 
-/* Rust Demangler implementation (non-legacy, v0 onward). */
+/* Public Rust Demangler API. */
+
+int rust_demangle_callback (const char *mangled, int options,
+                            demangle_callbackref callback, void *opaque);
+char *rust_demangle (const char *mangled, int options);
+
+/* Rust Demangler implementation. */
 
 struct rust_demangler
 {
@@ -21,12 +26,23 @@ struct rust_demangler
   size_t sym_len;
 
   void *callback_opaque;
-  rust_demangler_callback callback;
+  demangle_callbackref callback;
 
+  /* Position of the next character to read from the symbol. */
   size_t next;
+
+  /* Non-zero if any error occurred. */
   int errored;
+
+  /* Non-zero if nothing should be printed. */
   int skipping_printing;
+
+  /* Non-zero if printing should be verbose (e.g. include hashes). */
   int verbose;
+
+  /* Rust mangling version, with legacy mangling being -1. */
+  int version;
+
   uint64_t bound_lifetime_depth;
 };
 
@@ -190,7 +206,7 @@ static void
 print_str (struct rust_demangler *rdm, const char *data, size_t len)
 {
   if (!rdm->errored && !rdm->skipping_printing)
-    rdm->callback (rdm->callback_opaque, data, len);
+    rdm->callback (data, len, rdm->callback_opaque);
 }
 
 #define PRINT(s) print_str (rdm, s, strlen (s))
@@ -934,8 +950,8 @@ demangle_const_uint (struct rust_demangler *rdm)
 }
 
 int
-rust_demangle_with_callback (const char *mangled, void *callback_opaque,
-                             rust_demangler_callback callback)
+rust_demangle_callback (const char *mangled, int options,
+                        demangle_callbackref callback, void *opaque)
 {
   const char *p;
   struct rust_demangler rdm;
@@ -953,13 +969,14 @@ rust_demangle_with_callback (const char *mangled, void *callback_opaque,
   rdm.sym = mangled;
   rdm.sym_len = 0;
 
-  rdm.callback_opaque = callback_opaque;
+  rdm.callback_opaque = opaque;
   rdm.callback = callback;
 
   rdm.next = 0;
   rdm.errored = 0;
   rdm.skipping_printing = 0;
-  rdm.verbose = 0;
+  rdm.verbose = (options & DMGL_VERBOSE) != 0;
+  rdm.version = 0;
   rdm.bound_lifetime_depth = 0;
 
   /* Rust symbols use only [_0-9a-zA-Z] characters. */
@@ -1063,8 +1080,14 @@ str_buf_append (struct str_buf *buf, const char *data, size_t len)
   buf->len += len;
 }
 
+static void
+str_buf_demangle_callback (const char *data, size_t len, void *opaque)
+{
+  str_buf_append (opaque, data, len);
+}
+
 char *
-rust_demangle (const char *mangled)
+rust_demangle (const char *mangled, int options)
 {
   struct str_buf out;
   int success;
@@ -1074,8 +1097,8 @@ rust_demangle (const char *mangled)
   out.cap = 0;
   out.errored = 0;
 
-  success = rust_demangle_with_callback (
-      mangled, &out, (rust_demangler_callback)str_buf_append);
+  success = rust_demangle_callback (mangled, options,
+                                    str_buf_demangle_callback, &out);
 
   if (!success)
     {

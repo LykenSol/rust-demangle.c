@@ -6,17 +6,18 @@ use std::io::prelude::*;
 use std::fs::File;
 use std::path::PathBuf;
 
-fn demangle_via_c(mangled: &str/*, verbose: bool*/) -> String {
+fn demangle_via_c(mangled: &str, verbose: bool) -> String {
     use std::ffi::{CStr, CString};
     use std::os::raw::c_char;
 
     extern "C" {
-        fn rust_demangle(mangled: *const c_char/*, verbose: i32*/) -> *mut c_char;
+        fn rust_demangle(mangled: *const c_char, options: i32) -> *mut c_char;
         fn free(ptr: *mut c_char);
     }
 
+    let options = if verbose { 1 << 3 } else { 0 };
     let out = unsafe {
-        rust_demangle(CString::new(mangled).unwrap().as_ptr()/*, verbose as i32*/)
+        rust_demangle(CString::new(mangled).unwrap().as_ptr(), options)
     };
     if out.is_null() {
         String::new()
@@ -32,7 +33,7 @@ fn demangle_via_c(mangled: &str/*, verbose: bool*/) -> String {
 fn main() {
     macro_rules! t_nohash {
         ($a:expr, $b:expr) => ({
-            assert_eq!(format!("{:#}", demangle_via_c($a/*, false*/)), $b);
+            assert_eq!(format!("{:#}", demangle_via_c($a, false)), $b);
         })
     }
 
@@ -74,13 +75,13 @@ fn main() {
                         if demangling_alt.contains('?') {
                             panic!("demangle(alt) printing failed for {:?}\n{:?}", mangling, demangling_alt);
                         }
-                        assert_eq!(demangling_alt, demangle_via_c(mangling/*, false*/));
+                        assert_eq!(demangling_alt, demangle_via_c(mangling, false));
 
-                        /*let demangling = format!("{}", demangling);
+                        let demangling = format!("{}", demangling);
                         if demangling.contains('?') {
                             panic!("demangle printing failed for {:?}\n{:?}", mangling, demangling);
                         }
-                        assert_eq!(demangling, demangle_via_c(mangling, true));*/
+                        assert_eq!(demangling, demangle_via_c(mangling, true));
                     }
                     Err(_) => panic!("try_demangle failed for {:?}", mangling),
                 }
