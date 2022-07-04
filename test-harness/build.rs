@@ -7,6 +7,7 @@ fn main() {
     cc::Build::new()
         .file("../rust-demangle.c")
         .flag_if_supported("-std=c99")
+        .flag_if_supported("-pedantic")
         .warnings(true)
         .warnings_into_errors(true)
         .flag_if_supported("-Werror=uninitialized")
