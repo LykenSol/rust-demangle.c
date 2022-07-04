@@ -1,9 +1,7 @@
-extern crate rustc_demangle;
-
 use std::env;
-use std::io::BufReader;
-use std::io::prelude::*;
 use std::fs::File;
+use std::io::prelude::*;
+use std::io::BufReader;
 use std::path::PathBuf;
 
 fn demangle_via_c(mangled: &str, verbose: bool) -> String {
@@ -16,9 +14,8 @@ fn demangle_via_c(mangled: &str, verbose: bool) -> String {
     }
 
     let flags = if verbose { 1 } else { 0 };
-    let out = unsafe {
-        rust_demangle(CString::new(mangled).unwrap().as_ptr(), flags)
-    };
+    let mangled = CString::new(mangled).unwrap();
+    let out = unsafe { rust_demangle(mangled.as_ptr(), flags) };
     if out.is_null() {
         String::new()
     } else {
@@ -32,15 +29,12 @@ fn demangle_via_c(mangled: &str, verbose: bool) -> String {
 
 fn main() {
     macro_rules! t_nohash {
-        ($a:expr, $b:expr) => ({
+        ($a:expr, $b:expr) => {{
             assert_eq!(format!("{:#}", demangle_via_c($a, false)), $b);
-        })
+        }};
     }
 
-    t_nohash!(
-        "_RNvC6_123foo3bar",
-        "123foo::bar"
-    );
+    t_nohash!("_RNvC6_123foo3bar", "123foo::bar");
     t_nohash!(
         "_RNqCs4fqI2P2rA04_11utf8_identsu30____7hkackfecea1cbdathfdh9hlq6y",
         "utf8_idents::საჭმელად_გემრიელი_სადილი"
@@ -73,13 +67,19 @@ fn main() {
                     Ok(demangling) => {
                         let demangling_alt = format!("{:#}", demangling);
                         if demangling_alt.contains('?') {
-                            panic!("demangle(alt) printing failed for {:?}\n{:?}", mangling, demangling_alt);
+                            panic!(
+                                "demangle(alt) printing failed for {:?}\n{:?}",
+                                mangling, demangling_alt
+                            );
                         }
                         assert_eq!(demangling_alt, demangle_via_c(mangling, false));
 
                         let demangling = format!("{}", demangling);
                         if demangling.contains('?') {
-                            panic!("demangle printing failed for {:?}\n{:?}", mangling, demangling);
+                            panic!(
+                                "demangle printing failed for {:?}\n{:?}",
+                                mangling, demangling
+                            );
                         }
                         assert_eq!(demangling, demangle_via_c(mangling, true));
                     }
