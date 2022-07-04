@@ -761,12 +761,10 @@ static void demangle_const(struct rust_demangler *rdm) {
 
     if (eat(rdm, 'p'))
         PRINT("_");
-    else
+    else {
         demangle_const_uint(rdm);
-
-    if (rdm->verbose) {
-        PRINT(": ");
-        PRINT(basic_type(ty_tag));
+        if (rdm->verbose)
+            PRINT(basic_type(ty_tag));
     }
 }
 
