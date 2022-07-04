@@ -12,7 +12,7 @@ struct rust_demangler
   size_t sym_len;
 
   void *callback_opaque;
-  demangle_callbackref callback;
+  void (*callback) (const char *data, size_t len, void *opaque);
 
   /* Position of the next character to read from the symbol. */
   size_t next;
@@ -942,7 +942,9 @@ demangle_const_uint (struct rust_demangler *rdm)
 
 int
 rust_demangle_callback (const char *mangled, int options,
-                        demangle_callbackref callback, void *opaque)
+                        void (*callback) (const char *data, size_t len,
+                                          void *opaque),
+                        void *opaque)
 {
   const char *p;
   struct rust_demangler rdm;
