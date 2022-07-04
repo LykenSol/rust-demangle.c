@@ -103,10 +103,11 @@ int main() {
 
 ## Testing
 
-`cargo run` will run some tests - it's implemented in Rust (in `test-harness`)
+`cargo test` will run built-in tests - it's implemented in Rust (in `test-harness`)
 so that it can depend on `rustc-demangle` itself for comparisons.
 
-`cargo run` can also take a list of CSV files for additional test data, but such
+Additionally, `cargo run -q --release --example check-csv-dataset path/to/syms/*.csv`
+can be used to provide CSV files with additional mangled symbols test data, but such
 datasets aren't trivial to obtain (existing ones required building `rust-lang/rust`
 with a compiler patch that reacts to a custom environment variable).
 They're also quite large (~1GiB uncompressed) so none have been published anywhere yet.
