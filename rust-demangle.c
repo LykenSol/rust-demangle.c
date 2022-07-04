@@ -71,15 +71,12 @@ static char next(struct rust_demangler *rdm) {
 }
 
 static uint64_t parse_integer_62(struct rust_demangler *rdm) {
-    char c;
-    uint64_t x;
-
     if (eat(rdm, '_'))
         return 0;
 
-    x = 0;
+    uint64_t x = 0;
     while (!eat(rdm, '_')) {
-        c = next(rdm);
+        char c = next(rdm);
         x *= 62;
         if (IS_DIGIT(c))
             x += c - '0';
@@ -114,9 +111,6 @@ struct rust_mangled_ident {
 };
 
 static struct rust_mangled_ident parse_ident(struct rust_demangler *rdm) {
-    char c;
-    size_t start, len;
-    int is_punycode;
     struct rust_mangled_ident ident;
 
     ident.ascii = NULL;
@@ -124,11 +118,11 @@ static struct rust_mangled_ident parse_ident(struct rust_demangler *rdm) {
     ident.punycode = NULL;
     ident.punycode_len = 0;
 
-    is_punycode = eat(rdm, 'u');
+    int is_punycode = eat(rdm, 'u');
 
-    c = next(rdm);
+    char c = next(rdm);
     CHECK_OR(IS_DIGIT(c), return ident);
-    len = c - '0';
+    size_t len = c - '0';
 
     if (c != '0')
         while (IS_DIGIT(peek(rdm)))
@@ -137,7 +131,7 @@ static struct rust_mangled_ident parse_ident(struct rust_demangler *rdm) {
     // Skip past the optional `_` separator.
     eat(rdm, '_');
 
-    start = rdm->next;
+    size_t start = rdm->next;
     rdm->next += len;
     // Check for overflows.
     CHECK_OR((start <= rdm->next) && (rdm->next <= rdm->sym_len), return ident);
@@ -190,13 +184,6 @@ static void print_uint64_hex(struct rust_demangler *rdm, uint64_t x) {
 
 static void
 print_ident(struct rust_demangler *rdm, struct rust_mangled_ident ident) {
-    uint8_t *out, *p, d;
-    size_t len, cap, punycode_pos, j;
-    // Punycode parameters and state.
-    uint32_t c;
-    size_t base, t_min, t_max, skew, damp, bias, i;
-    size_t delta, w, k, t;
-
     if (rdm->errored || rdm->skipping_printing)
         return;
 
@@ -205,8 +192,8 @@ print_ident(struct rust_demangler *rdm, struct rust_mangled_ident ident) {
         return;
     }
 
-    len = 0;
-    cap = 4;
+    size_t len = 0;
+    size_t cap = 4;
     while (cap < ident.ascii_len) {
         cap *= 2;
         // Check for overflows.
@@ -214,12 +201,12 @@ print_ident(struct rust_demangler *rdm, struct rust_mangled_ident ident) {
     }
 
     // Store the output codepoints as groups of 4 UTF-8 bytes.
-    out = (uint8_t *)malloc(cap * 4);
+    uint8_t *out = (uint8_t *)malloc(cap * 4);
     CHECK_OR(out, return );
 
     // Populate initial output from ASCII fragment.
     for (len = 0; len < ident.ascii_len; len++) {
-        p = out + 4 * len;
+        uint8_t *p = out + 4 * len;
         p[0] = 0;
         p[1] = 0;
         p[2] = 0;
@@ -227,21 +214,23 @@ print_ident(struct rust_demangler *rdm, struct rust_mangled_ident ident) {
     }
 
     // Punycode parameters and initial state.
-    base = 36;
-    t_min = 1;
-    t_max = 26;
-    skew = 38;
-    damp = 700;
-    bias = 72;
-    i = 0;
-    c = 0x80;
+    size_t base = 36;
+    size_t t_min = 1;
+    size_t t_max = 26;
+    size_t skew = 38;
+    size_t damp = 700;
+    size_t bias = 72;
+    size_t i = 0;
+    uint32_t c = 0x80;
 
-    punycode_pos = 0;
+    size_t punycode_pos = 0;
     while (punycode_pos < ident.punycode_len) {
         // Read one delta value.
-        delta = 0;
-        w = 1;
-        k = 0;
+        size_t delta = 0;
+        size_t w = 1;
+        size_t k = 0;
+        size_t t;
+        uint8_t d;
         do {
             k += base;
             t = k < bias ? 0 : (k - bias);
@@ -277,7 +266,7 @@ print_ident(struct rust_demangler *rdm, struct rust_mangled_ident ident) {
             CHECK_OR((cap * 4) / 4 == cap, goto cleanup);
             CHECK_OR(cap >= len, goto cleanup);
         }
-        p = (uint8_t *)realloc(out, cap * 4);
+        uint8_t *p = (uint8_t *)realloc(out, cap * 4);
         CHECK_OR(p, goto cleanup);
         out = p;
 
@@ -312,6 +301,7 @@ print_ident(struct rust_demangler *rdm, struct rust_mangled_ident ident) {
     }
 
     // Remove all the 0 bytes to leave behind an UTF-8 string.
+    size_t j;
     for (i = 0, j = 0; i < len * 4; i++)
         if (out[i] != 0)
             out[j++] = out[i];
@@ -326,19 +316,16 @@ cleanup:
 /// An index of `0` always refers to `'_`, but starting with `1`,
 /// indices refer to late-bound lifetimes introduced by a binder.
 static void print_lifetime_from_index(struct rust_demangler *rdm, uint64_t lt) {
-    char c;
-    uint64_t depth;
-
     PRINT("'");
     if (lt == 0) {
         PRINT("_");
         return;
     }
 
-    depth = rdm->bound_lifetime_depth - lt;
+    uint64_t depth = rdm->bound_lifetime_depth - lt;
     // Try to print lifetimes alphabetically first.
     if (depth < 26) {
-        c = 'a' + depth;
+        char c = 'a' + depth;
         print_str(rdm, &c, 1);
     } else {
         // Use `'_123` after running out of letters.
@@ -362,14 +349,12 @@ static void demangle_const_uint(struct rust_demangler *rdm);
 /// printing e.g. `for<'a, 'b> `, and make those lifetimes visible
 /// to the caller (via depth level, which the caller should reset).
 static void demangle_binder(struct rust_demangler *rdm) {
-    uint64_t i, bound_lifetimes;
-
     CHECK_OR(!rdm->errored, return );
 
-    bound_lifetimes = parse_opt_integer_62(rdm, 'G');
+    uint64_t bound_lifetimes = parse_opt_integer_62(rdm, 'G');
     if (bound_lifetimes > 0) {
         PRINT("for<");
-        for (i = 0; i < bound_lifetimes; i++) {
+        for (uint64_t i = 0; i < bound_lifetimes; i++) {
             if (i > 0)
                 PRINT(", ");
             rdm->bound_lifetime_depth++;
@@ -380,18 +365,13 @@ static void demangle_binder(struct rust_demangler *rdm) {
 }
 
 static void demangle_path(struct rust_demangler *rdm, int in_value) {
-    char tag, ns;
-    int was_skipping_printing;
-    size_t i, backref, old_next;
-    uint64_t dis;
-    struct rust_mangled_ident name;
-
     CHECK_OR(!rdm->errored, return );
 
-    switch (tag = next(rdm)) {
-    case 'C':
-        dis = parse_disambiguator(rdm);
-        name = parse_ident(rdm);
+    char tag = next(rdm);
+    switch (tag) {
+    case 'C': {
+        uint64_t dis = parse_disambiguator(rdm);
+        struct rust_mangled_ident name = parse_ident(rdm);
 
         print_ident(rdm, name);
         if (rdm->verbose) {
@@ -400,14 +380,15 @@ static void demangle_path(struct rust_demangler *rdm, int in_value) {
             PRINT("]");
         }
         break;
-    case 'N':
-        ns = next(rdm);
+    }
+    case 'N': {
+        char ns = next(rdm);
         CHECK_OR(IS_LOWER(ns) || IS_UPPER(ns), return );
 
         demangle_path(rdm, in_value);
 
-        dis = parse_disambiguator(rdm);
-        name = parse_ident(rdm);
+        uint64_t dis = parse_disambiguator(rdm);
+        struct rust_mangled_ident name = parse_ident(rdm);
 
         if (IS_UPPER(ns)) {
             // Special namespaces, like closures and shims.
@@ -438,11 +419,12 @@ static void demangle_path(struct rust_demangler *rdm, int in_value) {
             }
         }
         break;
+    }
     case 'M':
     case 'X':
         // Ignore the `impl`'s own path.
         parse_disambiguator(rdm);
-        was_skipping_printing = rdm->skipping_printing;
+        int was_skipping_printing = rdm->skipping_printing;
         rdm->skipping_printing = 1;
         demangle_path(rdm, in_value);
         rdm->skipping_printing = was_skipping_printing;
@@ -460,31 +442,31 @@ static void demangle_path(struct rust_demangler *rdm, int in_value) {
         if (in_value)
             PRINT("::");
         PRINT("<");
-        for (i = 0; !rdm->errored && !eat(rdm, 'E'); i++) {
+        for (size_t i = 0; !rdm->errored && !eat(rdm, 'E'); i++) {
             if (i > 0)
                 PRINT(", ");
             demangle_generic_arg(rdm);
         }
         PRINT(">");
         break;
-    case 'B':
-        backref = parse_integer_62(rdm);
+    case 'B': {
+        size_t backref = parse_integer_62(rdm);
         if (!rdm->skipping_printing) {
-            old_next = rdm->next;
+            size_t old_next = rdm->next;
             rdm->next = backref;
             demangle_path(rdm, in_value);
             rdm->next = old_next;
         }
         break;
+    }
     default:
         ERROR_AND(return );
     }
 }
 
 static void demangle_generic_arg(struct rust_demangler *rdm) {
-    uint64_t lt;
     if (eat(rdm, 'L')) {
-        lt = parse_integer_62(rdm);
+        uint64_t lt = parse_integer_62(rdm);
         print_lifetime_from_index(rdm, lt);
     } else if (eat(rdm, 'K'))
         demangle_const(rdm);
@@ -543,17 +525,11 @@ static const char *basic_type(char tag) {
 }
 
 static void demangle_type(struct rust_demangler *rdm) {
-    char tag;
-    size_t i, old_next, backref;
-    uint64_t lt, old_bound_lifetime_depth;
-    const char *basic;
-    struct rust_mangled_ident abi;
-
     CHECK_OR(!rdm->errored, return );
 
-    tag = next(rdm);
+    char tag = next(rdm);
 
-    basic = basic_type(tag);
+    const char *basic = basic_type(tag);
     if (basic) {
         PRINT(basic);
         return;
@@ -564,7 +540,7 @@ static void demangle_type(struct rust_demangler *rdm) {
     case 'Q':
         PRINT("&");
         if (eat(rdm, 'L')) {
-            lt = parse_integer_62(rdm);
+            uint64_t lt = parse_integer_62(rdm);
             if (lt) {
                 print_lifetime_from_index(rdm, lt);
                 PRINT(" ");
@@ -595,6 +571,7 @@ static void demangle_type(struct rust_demangler *rdm) {
         break;
     case 'T':
         PRINT("(");
+        size_t i;
         for (i = 0; !rdm->errored && !eat(rdm, 'E'); i++) {
             if (i > 0)
                 PRINT(", ");
@@ -604,14 +581,16 @@ static void demangle_type(struct rust_demangler *rdm) {
             PRINT(",");
         PRINT(")");
         break;
-    case 'F':
-        old_bound_lifetime_depth = rdm->bound_lifetime_depth;
+    case 'F': {
+        uint64_t old_bound_lifetime_depth = rdm->bound_lifetime_depth;
         demangle_binder(rdm);
 
         if (eat(rdm, 'U'))
             PRINT("unsafe ");
 
         if (eat(rdm, 'K')) {
+            struct rust_mangled_ident abi;
+
             if (eat(rdm, 'C')) {
                 abi.ascii = "C";
                 abi.ascii_len = 1;
@@ -624,7 +603,7 @@ static void demangle_type(struct rust_demangler *rdm) {
 
             // If the ABI had any `-`, they were replaced with `_`,
             // so the parts between `_` have to be re-joined with `-`.
-            for (i = 0; i < abi.ascii_len; i++) {
+            for (size_t i = 0; i < abi.ascii_len; i++) {
                 if (abi.ascii[i] == '_') {
                     print_str(rdm, abi.ascii, i);
                     PRINT("-");
@@ -639,7 +618,7 @@ static void demangle_type(struct rust_demangler *rdm) {
         }
 
         PRINT("fn(");
-        for (i = 0; !rdm->errored && !eat(rdm, 'E'); i++) {
+        for (size_t i = 0; !rdm->errored && !eat(rdm, 'E'); i++) {
             if (i > 0)
                 PRINT(", ");
             demangle_type(rdm);
@@ -657,13 +636,14 @@ static void demangle_type(struct rust_demangler *rdm) {
     restore:
         rdm->bound_lifetime_depth = old_bound_lifetime_depth;
         break;
+    }
     case 'D':
         PRINT("dyn ");
 
-        old_bound_lifetime_depth = rdm->bound_lifetime_depth;
+        uint64_t old_bound_lifetime_depth = rdm->bound_lifetime_depth;
         demangle_binder(rdm);
 
-        for (i = 0; !rdm->errored && !eat(rdm, 'E'); i++) {
+        for (size_t i = 0; !rdm->errored && !eat(rdm, 'E'); i++) {
             if (i > 0)
                 PRINT(" + ");
             demangle_dyn_trait(rdm);
@@ -673,21 +653,22 @@ static void demangle_type(struct rust_demangler *rdm) {
         rdm->bound_lifetime_depth = old_bound_lifetime_depth;
 
         CHECK_OR(eat(rdm, 'L'), return );
-        lt = parse_integer_62(rdm);
+        uint64_t lt = parse_integer_62(rdm);
         if (lt) {
             PRINT(" + ");
             print_lifetime_from_index(rdm, lt);
         }
         break;
-    case 'B':
-        backref = parse_integer_62(rdm);
+    case 'B': {
+        size_t backref = parse_integer_62(rdm);
         if (!rdm->skipping_printing) {
-            old_next = rdm->next;
+            size_t old_next = rdm->next;
             rdm->next = backref;
             demangle_type(rdm);
             rdm->next = old_next;
         }
         break;
+    }
     default:
         // Go back to the tag, so `demangle_path` also sees it.
         rdm->next--;
@@ -701,17 +682,14 @@ static void demangle_type(struct rust_demangler *rdm) {
 /// To this end, this method will keep the `<...>` of an 'I' path
 /// open, by omitting the `>`, and return `Ok(true)` in that case.
 static int demangle_path_maybe_open_generics(struct rust_demangler *rdm) {
-    int open;
-    size_t i, old_next, backref;
-
-    open = 0;
+    int open = 0;
 
     CHECK_OR(!rdm->errored, return open);
 
     if (eat(rdm, 'B')) {
-        backref = parse_integer_62(rdm);
+        size_t backref = parse_integer_62(rdm);
         if (!rdm->skipping_printing) {
-            old_next = rdm->next;
+            size_t old_next = rdm->next;
             rdm->next = backref;
             open = demangle_path_maybe_open_generics(rdm);
             rdm->next = old_next;
@@ -720,7 +698,7 @@ static int demangle_path_maybe_open_generics(struct rust_demangler *rdm) {
         demangle_path(rdm, 0);
         PRINT("<");
         open = 1;
-        for (i = 0; !rdm->errored && !eat(rdm, 'E'); i++) {
+        for (size_t i = 0; !rdm->errored && !eat(rdm, 'E'); i++) {
             if (i > 0)
                 PRINT(", ");
             demangle_generic_arg(rdm);
@@ -731,12 +709,9 @@ static int demangle_path_maybe_open_generics(struct rust_demangler *rdm) {
 }
 
 static void demangle_dyn_trait(struct rust_demangler *rdm) {
-    int open;
-    struct rust_mangled_ident name;
-
     CHECK_OR(!rdm->errored, return );
 
-    open = demangle_path_maybe_open_generics(rdm);
+    int open = demangle_path_maybe_open_generics(rdm);
 
     while (eat(rdm, 'p')) {
         if (!open)
@@ -745,7 +720,7 @@ static void demangle_dyn_trait(struct rust_demangler *rdm) {
             PRINT(", ");
         open = 1;
 
-        name = parse_ident(rdm);
+        struct rust_mangled_ident name = parse_ident(rdm);
         print_ident(rdm, name);
         PRINT(" = ");
         demangle_type(rdm);
@@ -756,15 +731,12 @@ static void demangle_dyn_trait(struct rust_demangler *rdm) {
 }
 
 static void demangle_const(struct rust_demangler *rdm) {
-    char ty_tag;
-    size_t old_next, backref;
-
     CHECK_OR(!rdm->errored, return );
 
     if (eat(rdm, 'B')) {
-        backref = parse_integer_62(rdm);
+        size_t backref = parse_integer_62(rdm);
         if (!rdm->skipping_printing) {
-            old_next = rdm->next;
+            size_t old_next = rdm->next;
             rdm->next = backref;
             demangle_const(rdm);
             rdm->next = old_next;
@@ -772,7 +744,7 @@ static void demangle_const(struct rust_demangler *rdm) {
         return;
     }
 
-    ty_tag = next(rdm);
+    char ty_tag = next(rdm);
     switch (ty_tag) {
     // Unsigned integer types.
     case 'h':
@@ -799,18 +771,14 @@ static void demangle_const(struct rust_demangler *rdm) {
 }
 
 static void demangle_const_uint(struct rust_demangler *rdm) {
-    char c;
-    size_t hex_len;
-    uint64_t value;
-
     CHECK_OR(!rdm->errored, return );
 
-    value = 0;
-    hex_len = 0;
+    uint64_t value = 0;
+    size_t hex_len = 0;
     while (!eat(rdm, '_')) {
         value <<= 4;
 
-        c = next(rdm);
+        char c = next(rdm);
         if (IS_DIGIT(c))
             value |= c - '0';
         else if (c >= 'a' && c <= 'f')
@@ -834,9 +802,6 @@ int rust_demangle_with_callback(
     const char *mangled, int flags,
     void (*callback)(const char *data, size_t len, void *opaque), void *opaque
 ) {
-    const char *p;
-    struct rust_demangler rdm;
-
     // Rust symbols always start with _R.
     if (mangled[0] == '_' && mangled[1] == 'R')
         mangled += 2;
@@ -846,6 +811,8 @@ int rust_demangle_with_callback(
     // Paths always start with uppercase characters.
     if (!IS_UPPER(mangled[0]))
         return 0;
+
+    struct rust_demangler rdm;
 
     rdm.sym = mangled;
     rdm.sym_len = 0;
@@ -861,7 +828,7 @@ int rust_demangle_with_callback(
     rdm.bound_lifetime_depth = 0;
 
     // Rust symbols use only [_0-9a-zA-Z] characters.
-    for (p = mangled; *p; p++) {
+    for (const char *p = mangled; *p; p++) {
         if (!(*p == '_' || IS_DIGIT(*p) || IS_LOWER(*p) || IS_UPPER(*p)))
             return 0;
         rdm.sym_len++;
@@ -890,19 +857,16 @@ struct str_buf {
 };
 
 static void str_buf_reserve(struct str_buf *buf, size_t extra) {
-    size_t available, min_new_cap, new_cap;
-    char *new_ptr;
-
     // Allocation failed before.
     if (buf->errored)
         return;
 
-    available = buf->cap - buf->len;
+    size_t available = buf->cap - buf->len;
 
     if (extra <= available)
         return;
 
-    min_new_cap = buf->cap + (extra - available);
+    size_t min_new_cap = buf->cap + (extra - available);
 
     // Check for overflows.
     if (min_new_cap < buf->cap) {
@@ -910,7 +874,7 @@ static void str_buf_reserve(struct str_buf *buf, size_t extra) {
         return;
     }
 
-    new_cap = buf->cap;
+    size_t new_cap = buf->cap;
 
     if (new_cap == 0)
         new_cap = 4;
@@ -926,7 +890,7 @@ static void str_buf_reserve(struct str_buf *buf, size_t extra) {
         }
     }
 
-    new_ptr = (char *)realloc(buf->ptr, new_cap);
+    char *new_ptr = (char *)realloc(buf->ptr, new_cap);
     if (new_ptr == NULL) {
         free(buf->ptr);
         buf->ptr = NULL;
@@ -955,15 +919,15 @@ str_buf_demangle_callback(const char *data, size_t len, void *opaque) {
 
 char *rust_demangle(const char *mangled, int flags) {
     struct str_buf out;
-    int success;
 
     out.ptr = NULL;
     out.len = 0;
     out.cap = 0;
     out.errored = 0;
 
-    success =
-        rust_demangle_with_callback(mangled, flags, str_buf_demangle_callback, &out);
+    int success = rust_demangle_with_callback(
+        mangled, flags, str_buf_demangle_callback, &out
+    );
 
     if (!success) {
         free(out.ptr);
