@@ -1,24 +1,10 @@
-/* Some dependencies (FIXME: categorize based on what libiberty needs/has). */
+/* FIXME(eddyb) should this use `<rust-demangle.h>`? */
+#include "rust-demangle.h"
 
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#define IS_DIGIT(c) ((c) >= '0' && (c) <= '9')
-#define IS_UPPER(c) ((c) >= 'A' && (c) <= 'Z')
-#define IS_LOWER(c) ((c) >= 'a' && (c) <= 'z')
-
-#define DMGL_VERBOSE (1 << 3)
-typedef void (*demangle_callbackref) (const char *, size_t, void *);
-
-/* Public Rust Demangler API. */
-
-int rust_demangle_callback (const char *mangled, int options,
-                            demangle_callbackref callback, void *opaque);
-char *rust_demangle (const char *mangled, int options);
-
-/* Rust Demangler implementation. */
 
 struct rust_demangler
 {
@@ -60,6 +46,11 @@ struct rust_demangler
         ERROR_AND (x);                                                        \
     }                                                                         \
   while (0)
+
+/* FIXME(eddyb) consider renaming these to not start with `IS` (UB?). */
+#define IS_DIGIT(c) ((c) >= '0' && (c) <= '9')
+#define IS_UPPER(c) ((c) >= 'A' && (c) <= 'Z')
+#define IS_LOWER(c) ((c) >= 'a' && (c) <= 'z')
 
 /* Parsing functions. */
 
