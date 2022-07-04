@@ -57,15 +57,18 @@ Get `rust-demangle.c` and `rust-demangle.h` (via `git submodule`, vendoring, etc
 add them to your project's build system (as C source, and include path, respectively),
 then you can call `rust_demangle` with a symbol and some flags, e.g.:
 ```c
-#include <stdio.h>
 #include <rust-demangle.h>
+#include <stdio.h>
 
 int main() {
     const char *sym = "_RNvNtCsbmNqQUJIY6D_4core3foo3bar";
 
     printf("demangle(%s) = %s\n", sym, rust_demangle(sym, 0));
 
-    printf("demangle(%s, VERBOSE) = %s\n", sym, rust_demangle(sym, RUST_DEMANGLE_FLAG_VERBOSE));
+    printf(
+        "demangle(%s, VERBOSE) = %s\n", sym,
+        rust_demangle(sym, RUST_DEMANGLE_FLAG_VERBOSE)
+    );
 }
 ```
 which prints out, when ran:
@@ -81,11 +84,11 @@ Note that the example leaks the returned C strings, ideally you would `free` the
 If you want to avoid the cost of allocating the output in memory, you can also
 use `rust_demangle_callback`, which takes a "printing" callback instead, e.g.:
 ```c
-#include <stdio.h>
 #include <rust-demangle.h>
+#include <stdio.h>
 
 static void fwrite_callback(const char *data, size_t len, void *opaque) {
-    fwrite(data, len, 1, (FILE*)opaque);
+    fwrite(data, len, 1, (FILE *)opaque);
 }
 
 int main() {
@@ -96,7 +99,9 @@ int main() {
     printf("\n");
 
     printf("demangle(%s, VERBOSE) = ", sym);
-    rust_demangle_callback(sym, RUST_DEMANGLE_FLAG_VERBOSE, fwrite_callback, stdout);
+    rust_demangle_callback(
+        sym, RUST_DEMANGLE_FLAG_VERBOSE, fwrite_callback, stdout
+    );
     printf("\n");
 }
 ```
