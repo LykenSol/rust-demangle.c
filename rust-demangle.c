@@ -16,14 +16,14 @@ struct rust_demangler {
     // Position of the next character to read from the symbol.
     size_t next;
 
-    // Non-zero if any error occurred.
-    int errored;
+    // `true` if any error occurred.
+    bool errored;
 
-    // Non-zero if nothing should be printed.
-    int skipping_printing;
+    // `true` if nothing should be printed.
+    bool skipping_printing;
 
-    // Non-zero if printing should be verbose (e.g. include hashes).
-    int verbose;
+    // `true` if printing should be verbose (e.g. include hashes).
+    bool verbose;
 
     // Rust mangling version, with legacy mangling being -1.
     int version;
@@ -33,7 +33,7 @@ struct rust_demangler {
 
 #define ERROR_AND(x)                                                           \
     do {                                                                       \
-        rdm->errored = 1;                                                      \
+        rdm->errored = true;                                                   \
         x;                                                                     \
     } while (0)
 #define CHECK_OR(cond, x)                                                      \
@@ -55,12 +55,12 @@ static char peek(const struct rust_demangler *rdm) {
     return 0;
 }
 
-static int eat(struct rust_demangler *rdm, char c) {
+static bool eat(struct rust_demangler *rdm, char c) {
     if (peek(rdm) == c) {
         rdm->next++;
-        return 1;
+        return true;
     } else
-        return 0;
+        return false;
 }
 
 static char next(struct rust_demangler *rdm) {
@@ -118,7 +118,7 @@ static struct rust_mangled_ident parse_ident(struct rust_demangler *rdm) {
     ident.punycode = NULL;
     ident.punycode_len = 0;
 
-    int is_punycode = eat(rdm, 'u');
+    bool is_punycode = eat(rdm, 'u');
 
     char c = next(rdm);
     CHECK_OR(IS_DIGIT(c), return ident);
@@ -337,10 +337,10 @@ static void print_lifetime_from_index(struct rust_demangler *rdm, uint64_t lt) {
 // Demangling functions.
 
 static void demangle_binder(struct rust_demangler *rdm);
-static void demangle_path(struct rust_demangler *rdm, int in_value);
+static void demangle_path(struct rust_demangler *rdm, bool in_value);
 static void demangle_generic_arg(struct rust_demangler *rdm);
 static void demangle_type(struct rust_demangler *rdm);
-static int demangle_path_maybe_open_generics(struct rust_demangler *rdm);
+static bool demangle_path_maybe_open_generics(struct rust_demangler *rdm);
 static void demangle_dyn_trait(struct rust_demangler *rdm);
 static void demangle_const(struct rust_demangler *rdm);
 static void demangle_const_uint(struct rust_demangler *rdm);
@@ -364,7 +364,7 @@ static void demangle_binder(struct rust_demangler *rdm) {
     }
 }
 
-static void demangle_path(struct rust_demangler *rdm, int in_value) {
+static void demangle_path(struct rust_demangler *rdm, bool in_value) {
     CHECK_OR(!rdm->errored, return );
 
     char tag = next(rdm);
@@ -424,8 +424,8 @@ static void demangle_path(struct rust_demangler *rdm, int in_value) {
     case 'X':
         // Ignore the `impl`'s own path.
         parse_disambiguator(rdm);
-        int was_skipping_printing = rdm->skipping_printing;
-        rdm->skipping_printing = 1;
+        bool was_skipping_printing = rdm->skipping_printing;
+        rdm->skipping_printing = true;
         demangle_path(rdm, in_value);
         rdm->skipping_printing = was_skipping_printing;
     case 'Y':
@@ -433,7 +433,7 @@ static void demangle_path(struct rust_demangler *rdm, int in_value) {
         demangle_type(rdm);
         if (tag != 'M') {
             PRINT(" as ");
-            demangle_path(rdm, 0);
+            demangle_path(rdm, false);
         }
         PRINT(">");
         break;
@@ -672,7 +672,7 @@ static void demangle_type(struct rust_demangler *rdm) {
     default:
         // Go back to the tag, so `demangle_path` also sees it.
         rdm->next--;
-        demangle_path(rdm, 0);
+        demangle_path(rdm, false);
     }
 }
 
@@ -681,8 +681,8 @@ static void demangle_type(struct rust_demangler *rdm) {
 /// in the `<...>` of the trait, e.g. `dyn Trait<T, U, Assoc=X>`.
 /// To this end, this method will keep the `<...>` of an 'I' path
 /// open, by omitting the `>`, and return `Ok(true)` in that case.
-static int demangle_path_maybe_open_generics(struct rust_demangler *rdm) {
-    int open = 0;
+static bool demangle_path_maybe_open_generics(struct rust_demangler *rdm) {
+    bool open = false;
 
     CHECK_OR(!rdm->errored, return open);
 
@@ -695,30 +695,30 @@ static int demangle_path_maybe_open_generics(struct rust_demangler *rdm) {
             rdm->next = old_next;
         }
     } else if (eat(rdm, 'I')) {
-        demangle_path(rdm, 0);
+        demangle_path(rdm, false);
         PRINT("<");
-        open = 1;
+        open = true;
         for (size_t i = 0; !rdm->errored && !eat(rdm, 'E'); i++) {
             if (i > 0)
                 PRINT(", ");
             demangle_generic_arg(rdm);
         }
     } else
-        demangle_path(rdm, 0);
+        demangle_path(rdm, false);
     return open;
 }
 
 static void demangle_dyn_trait(struct rust_demangler *rdm) {
     CHECK_OR(!rdm->errored, return );
 
-    int open = demangle_path_maybe_open_generics(rdm);
+    bool open = demangle_path_maybe_open_generics(rdm);
 
     while (eat(rdm, 'p')) {
         if (!open)
             PRINT("<");
         else
             PRINT(", ");
-        open = 1;
+        open = true;
 
         struct rust_mangled_ident name = parse_ident(rdm);
         print_ident(rdm, name);
@@ -798,7 +798,7 @@ static void demangle_const_uint(struct rust_demangler *rdm) {
     print_uint64(rdm, value);
 }
 
-int rust_demangle_with_callback(
+bool rust_demangle_with_callback(
     const char *mangled, int flags,
     void (*callback)(const char *data, size_t len, void *opaque), void *opaque
 ) {
@@ -806,11 +806,11 @@ int rust_demangle_with_callback(
     if (mangled[0] == '_' && mangled[1] == 'R')
         mangled += 2;
     else
-        return 0;
+        return false;
 
     // Paths always start with uppercase characters.
     if (!IS_UPPER(mangled[0]))
-        return 0;
+        return false;
 
     struct rust_demangler rdm;
 
@@ -821,8 +821,8 @@ int rust_demangle_with_callback(
     rdm.callback = callback;
 
     rdm.next = 0;
-    rdm.errored = 0;
-    rdm.skipping_printing = 0;
+    rdm.errored = false;
+    rdm.skipping_printing = false;
     rdm.verbose = (flags & RUST_DEMANGLE_FLAG_VERBOSE) != 0;
     rdm.version = 0;
     rdm.bound_lifetime_depth = 0;
@@ -830,16 +830,16 @@ int rust_demangle_with_callback(
     // Rust symbols use only [_0-9a-zA-Z] characters.
     for (const char *p = mangled; *p; p++) {
         if (!(*p == '_' || IS_DIGIT(*p) || IS_LOWER(*p) || IS_UPPER(*p)))
-            return 0;
+            return false;
         rdm.sym_len++;
     }
 
-    demangle_path(&rdm, 1);
+    demangle_path(&rdm, true);
 
     // Skip instantiating crate.
     if (!rdm.errored && rdm.next < rdm.sym_len) {
-        rdm.skipping_printing = 1;
-        demangle_path(&rdm, 0);
+        rdm.skipping_printing = true;
+        demangle_path(&rdm, false);
     }
 
     // It's an error to not reach the end.
@@ -853,7 +853,7 @@ struct str_buf {
     char *ptr;
     size_t len;
     size_t cap;
-    int errored;
+    bool errored;
 };
 
 static void str_buf_reserve(struct str_buf *buf, size_t extra) {
@@ -870,7 +870,7 @@ static void str_buf_reserve(struct str_buf *buf, size_t extra) {
 
     // Check for overflows.
     if (min_new_cap < buf->cap) {
-        buf->errored = 1;
+        buf->errored = true;
         return;
     }
 
@@ -885,7 +885,7 @@ static void str_buf_reserve(struct str_buf *buf, size_t extra) {
 
         // Check for overflows.
         if (new_cap < buf->cap) {
-            buf->errored = 1;
+            buf->errored = true;
             return;
         }
     }
@@ -896,7 +896,7 @@ static void str_buf_reserve(struct str_buf *buf, size_t extra) {
         buf->ptr = NULL;
         buf->len = 0;
         buf->cap = 0;
-        buf->errored = 1;
+        buf->errored = true;
     } else {
         buf->ptr = new_ptr;
         buf->cap = new_cap;
@@ -923,9 +923,9 @@ char *rust_demangle(const char *mangled, int flags) {
     out.ptr = NULL;
     out.len = 0;
     out.cap = 0;
-    out.errored = 0;
+    out.errored = false;
 
-    int success = rust_demangle_with_callback(
+    bool success = rust_demangle_with_callback(
         mangled, flags, str_buf_demangle_callback, &out
     );
 
