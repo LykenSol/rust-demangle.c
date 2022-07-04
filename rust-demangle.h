@@ -1,11 +1,9 @@
 #include <stddef.h>
 
-/* FIXME(eddyb) clean up the naming. */
+#define RUST_DEMANGLE_FLAG_VERBOSE 1
 
-#define DMGL_VERBOSE (1 << 3)
-
-int rust_demangle_callback (const char *mangled, int options,
+int rust_demangle_callback (const char *mangled, int flags,
                             void (*callback) (const char *data, size_t len,
                                               void *opaque),
                             void *opaque);
-char *rust_demangle (const char *mangled, int options);
+char *rust_demangle (const char *mangled, int flags);

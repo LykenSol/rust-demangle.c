@@ -941,7 +941,7 @@ demangle_const_uint (struct rust_demangler *rdm)
 }
 
 int
-rust_demangle_callback (const char *mangled, int options,
+rust_demangle_callback (const char *mangled, int flags,
                         void (*callback) (const char *data, size_t len,
                                           void *opaque),
                         void *opaque)
@@ -968,7 +968,7 @@ rust_demangle_callback (const char *mangled, int options,
   rdm.next = 0;
   rdm.errored = 0;
   rdm.skipping_printing = 0;
-  rdm.verbose = (options & DMGL_VERBOSE) != 0;
+  rdm.verbose = (flags & RUST_DEMANGLE_FLAG_VERBOSE) != 0;
   rdm.version = 0;
   rdm.bound_lifetime_depth = 0;
 
@@ -1080,7 +1080,7 @@ str_buf_demangle_callback (const char *data, size_t len, void *opaque)
 }
 
 char *
-rust_demangle (const char *mangled, int options)
+rust_demangle (const char *mangled, int flags)
 {
   struct str_buf out;
   int success;
@@ -1090,7 +1090,7 @@ rust_demangle (const char *mangled, int options)
   out.cap = 0;
   out.errored = 0;
 
-  success = rust_demangle_callback (mangled, options,
+  success = rust_demangle_callback (mangled, flags,
                                     str_buf_demangle_callback, &out);
 
   if (!success)

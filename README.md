@@ -65,8 +65,7 @@ int main() {
 
     printf("demangle(%s) = %s\n", sym, rust_demangle(sym, 0));
 
-    // FIXME(eddyb) rename `DMGL_VERBOSE`.
-    printf("demangle(%s, VERBOSE) = %s\n", sym, rust_demangle(sym, DMGL_VERBOSE));
+    printf("demangle(%s, VERBOSE) = %s\n", sym, rust_demangle(sym, RUST_DEMANGLE_FLAG_VERBOSE));
 }
 ```
 which prints out, when ran:
@@ -97,8 +96,7 @@ int main() {
     printf("\n");
 
     printf("demangle(%s, VERBOSE) = ", sym);
-    // FIXME(eddyb) rename `DMGL_VERBOSE`.
-    rust_demangle_callback(sym, DMGL_VERBOSE, fwrite_callback, stdout);
+    rust_demangle_callback(sym, RUST_DEMANGLE_FLAG_VERBOSE, fwrite_callback, stdout);
     printf("\n");
 }
 ```

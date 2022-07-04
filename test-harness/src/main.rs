@@ -11,13 +11,13 @@ fn demangle_via_c(mangled: &str, verbose: bool) -> String {
     use std::os::raw::c_char;
 
     extern "C" {
-        fn rust_demangle(mangled: *const c_char, options: i32) -> *mut c_char;
+        fn rust_demangle(mangled: *const c_char, flags: i32) -> *mut c_char;
         fn free(ptr: *mut c_char);
     }
 
-    let options = if verbose { 1 << 3 } else { 0 };
+    let flags = if verbose { 1 } else { 0 };
     let out = unsafe {
-        rust_demangle(CString::new(mangled).unwrap().as_ptr(), options)
+        rust_demangle(CString::new(mangled).unwrap().as_ptr(), flags)
     };
     if out.is_null() {
         String::new()
