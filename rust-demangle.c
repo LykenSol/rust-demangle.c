@@ -1,4 +1,4 @@
-/* FIXME(eddyb) should this use `<rust-demangle.h>`? */
+// FIXME(eddyb) should this use `<rust-demangle.h>`?
 #include "rust-demangle.h"
 
 #include <inttypes.h>
@@ -13,19 +13,19 @@ struct rust_demangler {
     void *callback_opaque;
     void (*callback)(const char *data, size_t len, void *opaque);
 
-    /* Position of the next character to read from the symbol. */
+    // Position of the next character to read from the symbol.
     size_t next;
 
-    /* Non-zero if any error occurred. */
+    // Non-zero if any error occurred.
     int errored;
 
-    /* Non-zero if nothing should be printed. */
+    // Non-zero if nothing should be printed.
     int skipping_printing;
 
-    /* Non-zero if printing should be verbose (e.g. include hashes). */
+    // Non-zero if printing should be verbose (e.g. include hashes).
     int verbose;
 
-    /* Rust mangling version, with legacy mangling being -1. */
+    // Rust mangling version, with legacy mangling being -1.
     int version;
 
     uint64_t bound_lifetime_depth;
@@ -42,12 +42,12 @@ struct rust_demangler {
             ERROR_AND(x);                                                      \
     } while (0)
 
-/* FIXME(eddyb) consider renaming these to not start with `IS` (UB?). */
+// FIXME(eddyb) consider renaming these to not start with `IS` (UB?).
 #define IS_DIGIT(c) ((c) >= '0' && (c) <= '9')
 #define IS_UPPER(c) ((c) >= 'A' && (c) <= 'Z')
 #define IS_LOWER(c) ((c) >= 'a' && (c) <= 'z')
 
-/* Parsing functions. */
+// Parsing functions.
 
 static char peek(const struct rust_demangler *rdm) {
     if (rdm->next < rdm->sym_len)
@@ -104,11 +104,11 @@ static uint64_t parse_disambiguator(struct rust_demangler *rdm) {
 }
 
 struct rust_mangled_ident {
-    /* ASCII part of the identifier. */
+    // ASCII part of the identifier.
     const char *ascii;
     size_t ascii_len;
 
-    /* Punycode insertion codes for Unicode codepoints, if any. */
+    // Punycode insertion codes for Unicode codepoints, if any.
     const char *punycode;
     size_t punycode_len;
 };
@@ -134,12 +134,12 @@ static struct rust_mangled_ident parse_ident(struct rust_demangler *rdm) {
         while (IS_DIGIT(peek(rdm)))
             len = len * 10 + (next(rdm) - '0');
 
-    /* Skip past the optional `_` separator. */
+    // Skip past the optional `_` separator.
     eat(rdm, '_');
 
     start = rdm->next;
     rdm->next += len;
-    /* Check for overflows. */
+    // Check for overflows.
     CHECK_OR((start <= rdm->next) && (rdm->next <= rdm->sym_len), return ident);
 
     ident.ascii = rdm->sym + start;
@@ -150,7 +150,7 @@ static struct rust_mangled_ident parse_ident(struct rust_demangler *rdm) {
         while (ident.ascii_len > 0) {
             ident.ascii_len--;
 
-            /* The last '_' is a separator between ascii & punycode. */
+            // The last '_' is a separator between ascii & punycode.
             if (ident.ascii[ident.ascii_len] == '_')
                 break;
 
@@ -166,7 +166,7 @@ static struct rust_mangled_ident parse_ident(struct rust_demangler *rdm) {
     return ident;
 }
 
-/* Printing functions. */
+// Printing functions.
 
 static void
 print_str(struct rust_demangler *rdm, const char *data, size_t len) {
@@ -192,7 +192,7 @@ static void
 print_ident(struct rust_demangler *rdm, struct rust_mangled_ident ident) {
     uint8_t *out, *p, d;
     size_t len, cap, punycode_pos, j;
-    /* Punycode parameters and state. */
+    // Punycode parameters and state.
     uint32_t c;
     size_t base, t_min, t_max, skew, damp, bias, i;
     size_t delta, w, k, t;
@@ -209,15 +209,15 @@ print_ident(struct rust_demangler *rdm, struct rust_mangled_ident ident) {
     cap = 4;
     while (cap < ident.ascii_len) {
         cap *= 2;
-        /* Check for overflows. */
+        // Check for overflows.
         CHECK_OR((cap * 4) / 4 == cap, return );
     }
 
-    /* Store the output codepoints as groups of 4 UTF-8 bytes. */
+    // Store the output codepoints as groups of 4 UTF-8 bytes.
     out = (uint8_t *)malloc(cap * 4);
     CHECK_OR(out, return );
 
-    /* Populate initial output from ASCII fragment. */
+    // Populate initial output from ASCII fragment.
     for (len = 0; len < ident.ascii_len; len++) {
         p = out + 4 * len;
         p[0] = 0;
@@ -226,7 +226,7 @@ print_ident(struct rust_demangler *rdm, struct rust_mangled_ident ident) {
         p[3] = ident.ascii[len];
     }
 
-    /* Punycode parameters and initial state. */
+    // Punycode parameters and initial state.
     base = 36;
     t_min = 1;
     t_max = 26;
@@ -238,7 +238,7 @@ print_ident(struct rust_demangler *rdm, struct rust_mangled_ident ident) {
 
     punycode_pos = 0;
     while (punycode_pos < ident.punycode_len) {
-        /* Read one delta value. */
+        // Read one delta value.
         delta = 0;
         w = 1;
         k = 0;
@@ -264,16 +264,16 @@ print_ident(struct rust_demangler *rdm, struct rust_mangled_ident ident) {
             w *= base - t;
         } while (d >= t);
 
-        /* Compute the new insert position and character. */
+        // Compute the new insert position and character.
         len++;
         i += delta;
         c += i / len;
         i %= len;
 
-        /* Ensure enough space is available. */
+        // Ensure enough space is available.
         if (cap < len) {
             cap *= 2;
-            /* Check for overflows. */
+            // Check for overflows.
             CHECK_OR((cap * 4) / 4 == cap, goto cleanup);
             CHECK_OR(cap >= len, goto cleanup);
         }
@@ -281,24 +281,24 @@ print_ident(struct rust_demangler *rdm, struct rust_mangled_ident ident) {
         CHECK_OR(p, goto cleanup);
         out = p;
 
-        /* Move the characters after the insert position. */
+        // Move the characters after the insert position.
         p = out + i * 4;
         memmove(p + 4, p, (len - i - 1) * 4);
 
-        /* Insert the new character, as UTF-8 bytes. */
+        // Insert the new character, as UTF-8 bytes.
         p[0] = c >= 0x10000 ? 0xf0 | (c >> 18) : 0;
         p[1] =
             c >= 0x800 ? (c < 0x10000 ? 0xe0 : 0x80) | ((c >> 12) & 0x3f) : 0;
         p[2] = (c < 0x800 ? 0xc0 : 0x80) | ((c >> 6) & 0x3f);
         p[3] = 0x80 | (c & 0x3f);
 
-        /* If there are no more deltas, decoding is complete. */
+        // If there are no more deltas, decoding is complete.
         if (punycode_pos == ident.punycode_len)
             break;
 
         i++;
 
-        /* Perform bias adaptation. */
+        // Perform bias adaptation.
         delta /= damp;
         damp = 2;
 
@@ -311,7 +311,7 @@ print_ident(struct rust_demangler *rdm, struct rust_mangled_ident ident) {
         bias = k + ((base - t_min + 1) * delta) / (delta + skew);
     }
 
-    /* Remove all the 0 bytes to leave behind an UTF-8 string. */
+    // Remove all the 0 bytes to leave behind an UTF-8 string.
     for (i = 0, j = 0; i < len * 4; i++)
         if (out[i] != 0)
             out[j++] = out[i];
@@ -322,9 +322,9 @@ cleanup:
     free(out);
 }
 
-/* Print the lifetime according to the previously decoded index.
-   An index of `0` always refers to `'_`, but starting with `1`,
-   indices refer to late-bound lifetimes introduced by a binder. */
+/// Print the lifetime according to the previously decoded index.
+/// An index of `0` always refers to `'_`, but starting with `1`,
+/// indices refer to late-bound lifetimes introduced by a binder.
 static void print_lifetime_from_index(struct rust_demangler *rdm, uint64_t lt) {
     char c;
     uint64_t depth;
@@ -336,18 +336,18 @@ static void print_lifetime_from_index(struct rust_demangler *rdm, uint64_t lt) {
     }
 
     depth = rdm->bound_lifetime_depth - lt;
-    /* Try to print lifetimes alphabetically first. */
+    // Try to print lifetimes alphabetically first.
     if (depth < 26) {
         c = 'a' + depth;
         print_str(rdm, &c, 1);
     } else {
-        /* Use `'_123` after running out of letters. */
+        // Use `'_123` after running out of letters.
         PRINT("_");
         print_uint64(rdm, depth);
     }
 }
 
-/* Demangling functions. */
+// Demangling functions.
 
 static void demangle_binder(struct rust_demangler *rdm);
 static void demangle_path(struct rust_demangler *rdm, int in_value);
@@ -358,9 +358,9 @@ static void demangle_dyn_trait(struct rust_demangler *rdm);
 static void demangle_const(struct rust_demangler *rdm);
 static void demangle_const_uint(struct rust_demangler *rdm);
 
-/* Optionally enter a binder ('G') for late-bound lifetimes,
-   printing e.g. `for<'a, 'b> `, and make those lifetimes visible
-   to the caller (via depth level, which the caller should reset). */
+/// Optionally enter a binder ('G') for late-bound lifetimes,
+/// printing e.g. `for<'a, 'b> `, and make those lifetimes visible
+/// to the caller (via depth level, which the caller should reset).
 static void demangle_binder(struct rust_demangler *rdm) {
     uint64_t i, bound_lifetimes;
 
@@ -410,7 +410,7 @@ static void demangle_path(struct rust_demangler *rdm, int in_value) {
         name = parse_ident(rdm);
 
         if (IS_UPPER(ns)) {
-            /* Special namespaces, like closures and shims. */
+            // Special namespaces, like closures and shims.
             PRINT("::{");
             switch (ns) {
             case 'C':
@@ -430,7 +430,7 @@ static void demangle_path(struct rust_demangler *rdm, int in_value) {
             print_uint64(rdm, dis);
             PRINT("}");
         } else {
-            /* Implementation-specific/unspecified namespaces. */
+            // Implementation-specific/unspecified namespaces.
 
             if (name.ascii || name.punycode) {
                 PRINT("::");
@@ -440,7 +440,7 @@ static void demangle_path(struct rust_demangler *rdm, int in_value) {
         break;
     case 'M':
     case 'X':
-        /* Ignore the `impl`'s own path.*/
+        // Ignore the `impl`'s own path.
         parse_disambiguator(rdm);
         was_skipping_printing = rdm->skipping_printing;
         rdm->skipping_printing = 1;
@@ -622,8 +622,8 @@ static void demangle_type(struct rust_demangler *rdm) {
 
             PRINT("extern \"");
 
-            /* If the ABI had any `-`, they were replaced with `_`,
-               so the parts between `_` have to be re-joined with `-`. */
+            // If the ABI had any `-`, they were replaced with `_`,
+            // so the parts between `_` have to be re-joined with `-`.
             for (i = 0; i < abi.ascii_len; i++) {
                 if (abi.ascii[i] == '_') {
                     print_str(rdm, abi.ascii, i);
@@ -647,13 +647,13 @@ static void demangle_type(struct rust_demangler *rdm) {
         PRINT(")");
 
         if (eat(rdm, 'u')) {
-            /* Skip printing the return type if it's 'u', i.e. `()`. */
+            // Skip printing the return type if it's 'u', i.e. `()`.
         } else {
             PRINT(" -> ");
             demangle_type(rdm);
         }
 
-    /* Restore `bound_lifetime_depth` to outside the binder. */
+    // Restore `bound_lifetime_depth` to outside the binder.
     restore:
         rdm->bound_lifetime_depth = old_bound_lifetime_depth;
         break;
@@ -669,7 +669,7 @@ static void demangle_type(struct rust_demangler *rdm) {
             demangle_dyn_trait(rdm);
         }
 
-        /* Restore `bound_lifetime_depth` to outside the binder. */
+        // Restore `bound_lifetime_depth` to outside the binder.
         rdm->bound_lifetime_depth = old_bound_lifetime_depth;
 
         CHECK_OR(eat(rdm, 'L'), return );
@@ -689,17 +689,17 @@ static void demangle_type(struct rust_demangler *rdm) {
         }
         break;
     default:
-        /* Go back to the tag, so `demangle_path` also sees it. */
+        // Go back to the tag, so `demangle_path` also sees it.
         rdm->next--;
         demangle_path(rdm, 0);
     }
 }
 
-/* A trait in a trait object may have some "existential projections"
-   (i.e. associated type bindings) after it, which should be printed
-   in the `<...>` of the trait, e.g. `dyn Trait<T, U, Assoc=X>`.
-   To this end, this method will keep the `<...>` of an 'I' path
-   open, by omitting the `>`, and return `Ok(true)` in that case. */
+/// A trait in a trait object may have some "existential projections"
+/// (i.e. associated type bindings) after it, which should be printed
+/// in the `<...>` of the trait, e.g. `dyn Trait<T, U, Assoc=X>`.
+/// To this end, this method will keep the `<...>` of an 'I' path
+/// open, by omitting the `>`, and return `Ok(true)` in that case.
 static int demangle_path_maybe_open_generics(struct rust_demangler *rdm) {
     int open;
     size_t i, old_next, backref;
@@ -774,7 +774,7 @@ static void demangle_const(struct rust_demangler *rdm) {
 
     ty_tag = next(rdm);
     switch (ty_tag) {
-    /* Unsigned integer types. */
+    // Unsigned integer types.
     case 'h':
     case 't':
     case 'm':
@@ -820,7 +820,7 @@ static void demangle_const_uint(struct rust_demangler *rdm) {
         hex_len++;
     }
 
-    /* Print anything that doesn't fit in `uint64_t` verbatim. */
+    // Print anything that doesn't fit in `uint64_t` verbatim.
     if (hex_len > 16) {
         PRINT("0x");
         print_str(rdm, rdm->sym + (rdm->next - hex_len), hex_len);
@@ -837,13 +837,13 @@ int rust_demangle_with_callback(
     const char *p;
     struct rust_demangler rdm;
 
-    /* Rust symbols always start with _R. */
+    // Rust symbols always start with _R.
     if (mangled[0] == '_' && mangled[1] == 'R')
         mangled += 2;
     else
         return 0;
 
-    /* Paths always start with uppercase characters. */
+    // Paths always start with uppercase characters.
     if (!IS_UPPER(mangled[0]))
         return 0;
 
@@ -860,7 +860,7 @@ int rust_demangle_with_callback(
     rdm.version = 0;
     rdm.bound_lifetime_depth = 0;
 
-    /* Rust symbols use only [_0-9a-zA-Z] characters. */
+    // Rust symbols use only [_0-9a-zA-Z] characters.
     for (p = mangled; *p; p++) {
         if (!(*p == '_' || IS_DIGIT(*p) || IS_LOWER(*p) || IS_UPPER(*p)))
             return 0;
@@ -869,19 +869,19 @@ int rust_demangle_with_callback(
 
     demangle_path(&rdm, 1);
 
-    /* Skip instantiating crate. */
+    // Skip instantiating crate.
     if (!rdm.errored && rdm.next < rdm.sym_len) {
         rdm.skipping_printing = 1;
         demangle_path(&rdm, 0);
     }
 
-    /* It's an error to not reach the end. */
+    // It's an error to not reach the end.
     rdm.errored |= rdm.next != rdm.sym_len;
 
     return !rdm.errored;
 }
 
-/* Growable string buffers. */
+// Growable string buffers.
 struct str_buf {
     char *ptr;
     size_t len;
@@ -893,7 +893,7 @@ static void str_buf_reserve(struct str_buf *buf, size_t extra) {
     size_t available, min_new_cap, new_cap;
     char *new_ptr;
 
-    /* Allocation failed before. */
+    // Allocation failed before.
     if (buf->errored)
         return;
 
@@ -904,7 +904,7 @@ static void str_buf_reserve(struct str_buf *buf, size_t extra) {
 
     min_new_cap = buf->cap + (extra - available);
 
-    /* Check for overflows. */
+    // Check for overflows.
     if (min_new_cap < buf->cap) {
         buf->errored = 1;
         return;
@@ -915,11 +915,11 @@ static void str_buf_reserve(struct str_buf *buf, size_t extra) {
     if (new_cap == 0)
         new_cap = 4;
 
-    /* Double capacity until sufficiently large. */
+    // Double capacity until sufficiently large.
     while (new_cap < min_new_cap) {
         new_cap *= 2;
 
-        /* Check for overflows. */
+        // Check for overflows.
         if (new_cap < buf->cap) {
             buf->errored = 1;
             return;

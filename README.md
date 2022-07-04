@@ -2,8 +2,8 @@
 
 This is a single-file C port of the official Rust symbol demangler ([`rustc-demangle`](https://github.com/rust-lang/rustc-demangle), a Rust library).
 
-Note that despite looking like C89 code in places (e.g. comments and variable
-declarations), it's mostly aesthetic (i.e. for inclusion in certain projects),
+Note that despite looking like C89 code in places (e.g. variable declarations),
+it's mostly aesthetic (i.e. for inclusion in certain projects),
 and was only done on a best-effort basis (especially when GCC/Clang's `-std=c89`
 doesn't produce errors), and there are known exceptions (e.g. the use of
 `<inttypes.h>`, a C99 header).
