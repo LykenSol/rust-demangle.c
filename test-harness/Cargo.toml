@@ -1,0 +1,19 @@
+[package]
+name = "rust-demangle-c-test-harness"
+version = "0.0.0"
+license = "MIT OR Apache-2.0"
+edition = "2021"
+publish = false
+
+# HACK(eddyb) this stops `cargo test` from doing anything, but it'd be better
+# if it either errored, or was the only way to run the tests (which would get
+# in the way of testing that uses the CSV datasets).
+[[bin]]
+name = "rust-demangle-c-test-harness"
+test = false
+
+[dependencies]
+rustc-demangle = "0.1.21"
+
+[build-dependencies]
+cc = "1.0"
