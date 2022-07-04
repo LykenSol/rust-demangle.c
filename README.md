@@ -46,7 +46,7 @@ Notable differences (intentionally) introduced by porting:
   * this is mainly dictated by the ergonomics of the `rust_demangle` API, which
     requires `malloc`/`realloc` to return a new C string allocation
   * if there is demand for it, `rust_demangle` support could be made optional,
-    forcing heap-less users to always use `rust_demangle_callback` instead
+    forcing heap-less users to always use `rust_demangle_with_callback` instead
   * a subtler consequence is that `rustc-demangle` uses a fixed-size buffer on
     the stack for punycode decoding, while the C port can allocate it on the heap
 * Unicode support is always handrolled in the C port, and often simplified
@@ -82,7 +82,7 @@ Note that the example leaks the returned C strings, ideally you would `free` the
 ### Advanced usage (callback-based API)
 
 If you want to avoid the cost of allocating the output in memory, you can also
-use `rust_demangle_callback`, which takes a "printing" callback instead, e.g.:
+use `rust_demangle_with_callback`, which takes a "printing" callback instead, e.g.:
 ```c
 #include <rust-demangle.h>
 #include <stdio.h>
@@ -95,11 +95,11 @@ int main() {
     const char *sym = "_RNvNtCsbmNqQUJIY6D_4core3foo3bar";
 
     printf("demangle(%s) = ", sym);
-    rust_demangle_callback(sym, 0, fwrite_callback, stdout);
+    rust_demangle_with_callback(sym, 0, fwrite_callback, stdout);
     printf("\n");
 
     printf("demangle(%s, VERBOSE) = ", sym);
-    rust_demangle_callback(
+    rust_demangle_with_callback(
         sym, RUST_DEMANGLE_FLAG_VERBOSE, fwrite_callback, stdout
     );
     printf("\n");

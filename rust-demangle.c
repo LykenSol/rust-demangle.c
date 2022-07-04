@@ -830,7 +830,7 @@ static void demangle_const_uint(struct rust_demangler *rdm) {
     print_uint64(rdm, value);
 }
 
-int rust_demangle_callback(
+int rust_demangle_with_callback(
     const char *mangled, int flags,
     void (*callback)(const char *data, size_t len, void *opaque), void *opaque
 ) {
@@ -963,7 +963,7 @@ char *rust_demangle(const char *mangled, int flags) {
     out.errored = 0;
 
     success =
-        rust_demangle_callback(mangled, flags, str_buf_demangle_callback, &out);
+        rust_demangle_with_callback(mangled, flags, str_buf_demangle_callback, &out);
 
     if (!success) {
         free(out.ptr);
