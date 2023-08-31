@@ -428,6 +428,7 @@ static void demangle_path(struct rust_demangler *rdm, bool in_value) {
         rdm->skipping_printing = true;
         demangle_path(rdm, in_value);
         rdm->skipping_printing = was_skipping_printing;
+        __attribute__((fallthrough));
     case 'Y':
         PRINT("<");
         demangle_type(rdm);
@@ -569,7 +570,7 @@ static void demangle_type(struct rust_demangler *rdm) {
         }
         PRINT("]");
         break;
-    case 'T':
+    case 'T': {
         PRINT("(");
         size_t i;
         for (i = 0; !rdm->errored && !eat(rdm, 'E'); i++) {
@@ -581,6 +582,7 @@ static void demangle_type(struct rust_demangler *rdm) {
             PRINT(",");
         PRINT(")");
         break;
+    }
     case 'F': {
         uint64_t old_bound_lifetime_depth = rdm->bound_lifetime_depth;
         demangle_binder(rdm);
