@@ -934,7 +934,7 @@ static void demangle_const(struct rust_demangler *rdm, bool in_value) {
         break;
     }
 
-    case 'T':
+    case 'T': {
         if (!in_value) {
             opened_brace = true;
             PRINT("{");
@@ -959,6 +959,7 @@ static void demangle_const(struct rust_demangler *rdm, bool in_value) {
 
         PRINT(")");
         break;
+    }
 
     case 'V':
         if (!in_value) {
