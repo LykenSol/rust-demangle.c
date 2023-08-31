@@ -27,9 +27,9 @@ The current port status by category is:
       * arguably backported to Rust, as the C port always took this approach
     * `min_const_generics` constants (`bool`, `char`, negative signed integers)
       * this arguably also includes `p` as an *untyped* placeholder constant
+    * [`str` and structural constants](https://github.com/rust-lang/rfcs/pull/3161)
+      (only usable in `const` generics on unstable Rust)
   * **(UNPORTED)** symbol prefix flexibility (`__R` and `R`, instead of `_R`)
-  * **(UNPORTED)** [`str` and structural constants](https://github.com/rust-lang/rfcs/pull/3161)
-    (only usable in `const` generics on unstable Rust)
   * **(UNPORTED)** recursion limits
 * miscellaneous
   * **ported** PRs:

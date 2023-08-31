@@ -876,6 +876,9 @@ static void demangle_const(struct rust_demangler *rdm, bool in_value) {
     }
 
     case 'e':
+        // NOTE(eddyb) a string literal `"..."` has type `&str`, so
+        // to get back the type `str`, `*"..."` syntax is needed
+        // (even if that may not be valid in Rust itself).
         if (!in_value) {
             opened_brace = true;
             PRINT("{");
@@ -887,16 +890,138 @@ static void demangle_const(struct rust_demangler *rdm, bool in_value) {
 
     case 'R':
     case 'Q':
-        ERROR_AND(return ); // FIXME
+        if (ty_tag == 'R' && eat(rdm, 'e')) {
+            // NOTE(eddyb) this prints `"..."` instead of `&*"..."`, which
+                // is what `Re..._` would imply (see comment for `str` above).
+            demangle_const_str_literal(rdm);
+            break;
+        }
 
-    case 'A':
-        ERROR_AND(return ); // FIXME
+        if (!in_value) {
+            opened_brace = true;
+            PRINT("{");
+        }
+
+        PRINT("&");
+        if (ty_tag != 'R') {
+            PRINT("mut ");
+        }
+
+        demangle_const(rdm, true);
+        break;
+
+    case 'A': {
+        if (!in_value) {
+            opened_brace = true;
+            PRINT("{");
+        }
+
+        PRINT("[");
+
+        size_t i = 0;
+        while (!eat(rdm, 'E')) {
+            CHECK_OR(!rdm->errored, return );
+
+            if (i > 0)
+                PRINT(", ");
+
+            demangle_const(rdm, true);
+
+            i += 1;
+        }
+
+        PRINT("]");
+        break;
+    }
 
     case 'T':
-        ERROR_AND(return ); // FIXME
+        if (!in_value) {
+            opened_brace = true;
+            PRINT("{");
+        }
+
+        PRINT("(");
+
+        size_t i = 0;
+        while (!eat(rdm, 'E')) {
+            CHECK_OR(!rdm->errored, return );
+
+            if (i > 0)
+                PRINT(", ");
+
+            demangle_const(rdm, true);
+
+            i += 1;
+        }
+
+        if (i == 1)
+            PRINT(",");
+
+        PRINT(")");
+        break;
 
     case 'V':
-        ERROR_AND(return ); // FIXME
+        if (!in_value) {
+            opened_brace = true;
+            PRINT("{");
+        }
+
+        demangle_path(rdm, true);
+
+        switch (next(rdm)) {
+        case 'U':
+            break;
+
+        case 'T': {
+            PRINT("(");
+
+            size_t i = 0;
+            while (!eat(rdm, 'E')) {
+                CHECK_OR(!rdm->errored, return );
+
+                if (i > 0)
+                    PRINT(", ");
+
+                demangle_const(rdm, true);
+
+                i += 1;
+            }
+
+            PRINT(")");
+            break;
+        }
+
+        case 'S': {
+            PRINT(" { ");
+
+            size_t i = 0;
+            while (!eat(rdm, 'E')) {
+                CHECK_OR(!rdm->errored, return );
+
+                if (i > 0)
+                    PRINT(", ");
+
+                parse_disambiguator(rdm);
+
+                struct rust_mangled_ident name = parse_ident(rdm);
+                print_ident(rdm, name);
+
+                PRINT(": ");
+
+                demangle_const(rdm, true);
+
+                i += 1;
+            }
+
+            PRINT(" }");
+            break;
+        }
+
+        default:
+            ERROR_AND(return );
+        }
+
+        break;
 
     case 'B': {
         size_t backref = parse_integer_62(rdm);

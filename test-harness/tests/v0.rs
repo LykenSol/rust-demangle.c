@@ -5,6 +5,7 @@
 //! * `::` absolute paths -> `rust_demangle_c_test_harness::`
 //! * `#[cfg(unsupported_tests)]` was added to tests that couldn't compile
 //! * `#[ignore = "stack overflow"]` was added to tests that overflow the stack
+//! * Some tests have been split into a non-unicode and a unicode part
 //! * `#[should_panic]` was added to tests that don't pass yet
 
 use rust_demangle_c_test_harness::assert_contains;
@@ -92,8 +93,6 @@ fn demangle_const_generics_preview() {
     t_const_suffixed!("j7b_", "123", "usize");
 }
 
-// FIXME(eddyb) port the relevant functionality to C.
-#[should_panic]
 #[test]
 fn demangle_min_const_generics() {
     t_const!("p", "_");
@@ -140,8 +139,6 @@ fn demangle_const_str_unicode() {
     );
 }
 
-// FIXME(eddyb) port the relevant functionality to C.
-#[should_panic]
 // NOTE(eddyb) this uses the same strings as `demangle_const_str` and should
 // be kept in sync with it - while a macro could be used to generate both
 // `str` and `&str` tests, from a single list of strings, this seems clearer.
@@ -150,6 +147,12 @@ fn demangle_const_ref_str() {
     t_const!("Re616263_", "\"abc\"");
     t_const!("Re27_", r#""'""#);
     t_const!("Re090a_", "\"\\t\\n\"");
+}
+
+// FIXME(bjorn3) port the relevant functionality to C.
+#[should_panic]
+#[test]
+fn demangle_const_ref_unicode() {
     t_const!("Ree28882c3bc_", "\"∂ü\"");
     t_const!(
         "Ree183a1e18390e183ade1839be18394e1839ae18390e183935fe18392e18394e1839b\
@@ -163,8 +166,6 @@ fn demangle_const_ref_str() {
     );
 }
 
-// FIXME(eddyb) port the relevant functionality to C.
-#[should_panic]
 #[test]
 fn demangle_const_ref() {
     t_const!("Rp", "{&_}");
@@ -176,8 +177,6 @@ fn demangle_const_ref() {
     t_const!("QAE", "{&mut []}");
 }
 
-// FIXME(eddyb) port the relevant functionality to C.
-#[should_panic]
 #[test]
 fn demangle_const_array() {
     t_const!("AE", "{[]}");
@@ -187,8 +186,6 @@ fn demangle_const_array() {
     t_const!("AAh1_h2_EAh3_h4_EE", "{[[1, 2], [3, 4]]}");
 }
 
-// FIXME(eddyb) port the relevant functionality to C.
-#[should_panic]
 #[test]
 fn demangle_const_tuple() {
     t_const!("TE", "{()}");
@@ -200,8 +197,6 @@ fn demangle_const_tuple() {
     );
 }
 
-// FIXME(eddyb) port the relevant functionality to C.
-#[should_panic]
 #[test]
 fn demangle_const_adt() {
     t_const!(
