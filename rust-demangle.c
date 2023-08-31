@@ -827,23 +827,29 @@ bool rust_demangle_with_callback(
     rdm.version = 0;
     rdm.bound_lifetime_depth = 0;
 
-    // Rust symbols use only [_0-9a-zA-Z] characters.
+    // Rust symbols only use ASCII characters.
     for (const char *p = mangled; *p; p++) {
-        if (!(*p == '_' || IS_DIGIT(*p) || IS_LOWER(*p) || IS_UPPER(*p)))
+        if ((*p & 0x80) != 0)
             return false;
+
+        if (*p == '.' && strncmp(p, ".llvm.", 6) == 0) {
+            // Ignore .llvm.<hash> suffixes
+            break;
+        }
+
         rdm.sym_len++;
     }
 
     demangle_path(&rdm, true);
 
     // Skip instantiating crate.
-    if (!rdm.errored && rdm.next < rdm.sym_len) {
+    if (!rdm.errored && rdm.next < rdm.sym_len && peek(&rdm) >= 'A' && peek(&rdm) <= 'Z') {
         rdm.skipping_printing = true;
         demangle_path(&rdm, false);
     }
 
-    // It's an error to not reach the end.
-    rdm.errored |= rdm.next != rdm.sym_len;
+    // Print trailing garbage
+    print_str(&rdm, rdm.sym + rdm.next, rdm.sym_len - rdm.next);
 
     return !rdm.errored;
 }

@@ -32,7 +32,8 @@ The current port status by category is:
     (only usable in `const` generics on unstable Rust)
   * **(UNPORTED)** recursion limits
 * miscellaneous
-  * **(UNPORTED)** extraneous symbol suffix (e.g. `.llvm.*`) removal
+  * **ported** PRs:
+    * extraneous symbol suffix (e.g. `.llvm.*`) removal
   * **(UNPORTED)** output size limits
 
 Notable differences (intentionally) introduced by porting:

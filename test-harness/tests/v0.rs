@@ -223,8 +223,6 @@ fn demangle_exponential_explosion() {
     );
 }
 
-// FIXME(eddyb) port the relevant functionality to C.
-#[should_panic]
 #[test]
 fn demangle_thinlto() {
     t_nohash!("_RC3foo.llvm.9D1C9369", "foo");
@@ -232,8 +230,6 @@ fn demangle_thinlto() {
     t_nohash!("_RNvC9backtrace3foo.llvm.A5310EB9", "backtrace::foo");
 }
 
-// FIXME(eddyb) port the relevant functionality to C.
-#[should_panic]
 #[test]
 fn demangle_extra_suffix() {
     // From alexcrichton/rustc-demangle#27:
