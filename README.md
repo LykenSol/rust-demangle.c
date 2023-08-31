@@ -25,11 +25,11 @@ The current port status by category is:
     * [[#26] v0: allow identifiers to start with a digit.](https://github.com/rust-lang/rustc-demangle/pull/26)
     * [[#53] v0: replace `skip_*` methods with `print_*` methods in a "skip printing" mode.](https://github.com/rust-lang/rustc-demangle/pull/53)
       * arguably backported to Rust, as the C port always took this approach
+    * symbol prefix flexibility (`__R` and `R`, instead of `_R`)
     * `min_const_generics` constants (`bool`, `char`, negative signed integers)
       * this arguably also includes `p` as an *untyped* placeholder constant
     * [`str` and structural constants](https://github.com/rust-lang/rfcs/pull/3161)
       (only usable in `const` generics on unstable Rust)
-  * **(UNPORTED)** symbol prefix flexibility (`__R` and `R`, instead of `_R`)
   * **(UNPORTED)** recursion limits
 * miscellaneous
   * **ported** PRs:

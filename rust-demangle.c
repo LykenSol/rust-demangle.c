@@ -1111,9 +1111,16 @@ bool rust_demangle_with_callback(
     const char *mangled, int flags,
     void (*callback)(const char *data, size_t len, void *opaque), void *opaque
 ) {
-    // Rust symbols always start with _R.
+    // Rust symbols always start with R, _R or __R.
     if (mangled[0] == '_' && mangled[1] == 'R')
         mangled += 2;
+    else if (mangled[0] == 'R')
+        // On Windows, dbghelp strips leading underscores, so we accept "R..."
+        // form too.
+        mangled += 1;
+    else if (mangled[0] == '_' && mangled[1] == '_' && mangled[2] == 'R')
+        // On OSX, symbols are prefixed with an extra _
+        mangled += 3;
     else
         return false;
 
