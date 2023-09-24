@@ -119,7 +119,6 @@ fn demangle_const_str() {
     t_const!("e616263_", "{*\"abc\"}");
     t_const!("e27_", r#"{*"'"}"#);
     t_const!("e090a_", "{*\"\\t\\n\"}");
-
 }
 
 // FIXME(bjorn3) port the relevant functionality to C.

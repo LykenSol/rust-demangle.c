@@ -892,7 +892,7 @@ static void demangle_const(struct rust_demangler *rdm, bool in_value) {
     case 'Q':
         if (ty_tag == 'R' && eat(rdm, 'e')) {
             // NOTE(eddyb) this prints `"..."` instead of `&*"..."`, which
-                // is what `Re..._` would imply (see comment for `str` above).
+            // is what `Re..._` would imply (see comment for `str` above).
             demangle_const_str_literal(rdm);
             break;
         }
