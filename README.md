@@ -26,14 +26,14 @@ The current port status by category is:
     * [[#53] v0: replace `skip_*` methods with `print_*` methods in a "skip printing" mode.](https://github.com/rust-lang/rustc-demangle/pull/53)
       * arguably backported to Rust, as the C port always took this approach
     * symbol prefix flexibility (`__R` and `R`, instead of `_R`)
-    * `min_const_generics` constants (`bool`, `char`, negative signed integers)
-      * this arguably also includes `p` as an *untyped* placeholder constant
-    * [`str` and structural constants](https://github.com/rust-lang/rfcs/pull/3161)
+    * [[#39] Add support for `min_const_generics` constants](https://github.com/rust-lang/rustc-demangle/pull/39)
+      * [[#40] Elide the type when the const value is a placeholder `p`](https://github.com/rust-lang/rustc-demangle/pull/40)
+    * [[#55] v0: demangle structural constants and &str.](https://github.com/rust-lang/rustc-demangle/pull/55)
       (only usable in `const` generics on unstable Rust)
   * **(UNPORTED)** recursion limits
 * miscellaneous
   * **ported** PRs:
-    * extraneous symbol suffix (e.g. `.llvm.*`) removal
+    * [[#30] v0: also support preserving extra suffixes found after mangled symbol.](https://github.com/rust-lang/rustc-demangle/pull/30)
   * **(UNPORTED)** output size limits
 
 Notable differences (intentionally) introduced by porting:
