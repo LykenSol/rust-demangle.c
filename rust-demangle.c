@@ -182,7 +182,8 @@ static void print_uint64_hex(struct rust_demangler *rdm, uint64_t x) {
     PRINT(s);
 }
 
-static void print_quoted_escaped_char(struct rust_demangler *rdm, char quote, uint32_t c) {
+static void
+print_quoted_escaped_char(struct rust_demangler *rdm, char quote, uint32_t c) {
     switch (c) {
     case '\0':
         PRINT("\\0");
@@ -251,12 +252,12 @@ print_ident(struct rust_demangler *rdm, struct rust_mangled_ident ident) {
     while (cap < ident.ascii_len) {
         cap *= 2;
         // Check for overflows.
-        CHECK_OR((cap * 4) / 4 == cap, return );
+        CHECK_OR((cap * 4) / 4 == cap, return);
     }
 
     // Store the output codepoints as groups of 4 UTF-8 bytes.
     uint8_t *out = (uint8_t *)malloc(cap * 4);
-    CHECK_OR(out, return );
+    CHECK_OR(out, return);
 
     // Populate initial output from ASCII fragment.
     for (len = 0; len < ident.ascii_len; len++) {
@@ -404,7 +405,7 @@ static void demangle_const_str_literal(struct rust_demangler *rdm);
 /// printing e.g. `for<'a, 'b> `, and make those lifetimes visible
 /// to the caller (via depth level, which the caller should reset).
 static void demangle_binder(struct rust_demangler *rdm) {
-    CHECK_OR(!rdm->errored, return );
+    CHECK_OR(!rdm->errored, return);
 
     uint64_t bound_lifetimes = parse_opt_integer_62(rdm, 'G');
     if (bound_lifetimes > 0) {
@@ -420,7 +421,7 @@ static void demangle_binder(struct rust_demangler *rdm) {
 }
 
 static void demangle_path(struct rust_demangler *rdm, bool in_value) {
-    CHECK_OR(!rdm->errored, return );
+    CHECK_OR(!rdm->errored, return);
 
     char tag = next(rdm);
     switch (tag) {
@@ -438,7 +439,7 @@ static void demangle_path(struct rust_demangler *rdm, bool in_value) {
     }
     case 'N': {
         char ns = next(rdm);
-        CHECK_OR(IS_LOWER(ns) || IS_UPPER(ns), return );
+        CHECK_OR(IS_LOWER(ns) || IS_UPPER(ns), return);
 
         demangle_path(rdm, in_value);
 
@@ -516,7 +517,7 @@ static void demangle_path(struct rust_demangler *rdm, bool in_value) {
         break;
     }
     default:
-        ERROR_AND(return );
+        ERROR_AND(return);
     }
 }
 
@@ -581,7 +582,7 @@ static const char *basic_type(char tag) {
 }
 
 static void demangle_type(struct rust_demangler *rdm) {
-    CHECK_OR(!rdm->errored, return );
+    CHECK_OR(!rdm->errored, return);
 
     char tag = next(rdm);
 
@@ -709,7 +710,7 @@ static void demangle_type(struct rust_demangler *rdm) {
         // Restore `bound_lifetime_depth` to outside the binder.
         rdm->bound_lifetime_depth = old_bound_lifetime_depth;
 
-        CHECK_OR(eat(rdm, 'L'), return );
+        CHECK_OR(eat(rdm, 'L'), return);
         uint64_t lt = parse_integer_62(rdm);
         if (lt) {
             PRINT(" + ");
@@ -766,7 +767,7 @@ static bool demangle_path_maybe_open_generics(struct rust_demangler *rdm) {
 }
 
 static void demangle_dyn_trait(struct rust_demangler *rdm) {
-    CHECK_OR(!rdm->errored, return );
+    CHECK_OR(!rdm->errored, return);
 
     bool open = demangle_path_maybe_open_generics(rdm);
 
@@ -788,7 +789,7 @@ static void demangle_dyn_trait(struct rust_demangler *rdm) {
 }
 
 static void demangle_const(struct rust_demangler *rdm, bool in_value) {
-    CHECK_OR(!rdm->errored, return );
+    CHECK_OR(!rdm->errored, return);
 
     bool opened_brace = false;
 
@@ -832,7 +833,7 @@ static void demangle_const(struct rust_demangler *rdm, bool in_value) {
             else if (c >= 'a' && c <= 'f')
                 value |= 10 + (c - 'a');
             else
-                ERROR_AND(return );
+                ERROR_AND(return);
             hex_len++;
         }
 
@@ -841,7 +842,7 @@ static void demangle_const(struct rust_demangler *rdm, bool in_value) {
         } else if (value == 1) {
             PRINT("true");
         } else {
-            ERROR_AND(return );
+            ERROR_AND(return);
         }
         break;
     }
@@ -858,15 +859,15 @@ static void demangle_const(struct rust_demangler *rdm, bool in_value) {
             else if (c >= 'a' && c <= 'f')
                 value |= 10 + (c - 'a');
             else
-                ERROR_AND(return );
+                ERROR_AND(return);
             hex_len++;
         }
 
         if (value >= 0x10FFFF)
-            ERROR_AND(return );
+            ERROR_AND(return);
 
         if (value >= 0xD800 && value <= 0xDFFF)
-            ERROR_AND(return );
+            ERROR_AND(return);
 
         PRINT("'");
         print_quoted_escaped_char(rdm, '\'', value);
@@ -920,7 +921,7 @@ static void demangle_const(struct rust_demangler *rdm, bool in_value) {
 
         size_t i = 0;
         while (!eat(rdm, 'E')) {
-            CHECK_OR(!rdm->errored, return );
+            CHECK_OR(!rdm->errored, return);
 
             if (i > 0)
                 PRINT(", ");
@@ -944,7 +945,7 @@ static void demangle_const(struct rust_demangler *rdm, bool in_value) {
 
         size_t i = 0;
         while (!eat(rdm, 'E')) {
-            CHECK_OR(!rdm->errored, return );
+            CHECK_OR(!rdm->errored, return);
 
             if (i > 0)
                 PRINT(", ");
@@ -978,7 +979,7 @@ static void demangle_const(struct rust_demangler *rdm, bool in_value) {
 
             size_t i = 0;
             while (!eat(rdm, 'E')) {
-                CHECK_OR(!rdm->errored, return );
+                CHECK_OR(!rdm->errored, return);
 
                 if (i > 0)
                     PRINT(", ");
@@ -997,7 +998,7 @@ static void demangle_const(struct rust_demangler *rdm, bool in_value) {
 
             size_t i = 0;
             while (!eat(rdm, 'E')) {
-                CHECK_OR(!rdm->errored, return );
+                CHECK_OR(!rdm->errored, return);
 
                 if (i > 0)
                     PRINT(", ");
@@ -1019,7 +1020,7 @@ static void demangle_const(struct rust_demangler *rdm, bool in_value) {
         }
 
         default:
-            ERROR_AND(return );
+            ERROR_AND(return);
         }
 
         break;
@@ -1036,7 +1037,7 @@ static void demangle_const(struct rust_demangler *rdm, bool in_value) {
     }
 
     default:
-        ERROR_AND(return );
+        ERROR_AND(return);
     }
 
     if (opened_brace) {
@@ -1045,7 +1046,7 @@ static void demangle_const(struct rust_demangler *rdm, bool in_value) {
 }
 
 static void demangle_const_uint(struct rust_demangler *rdm, char ty_tag) {
-    CHECK_OR(!rdm->errored, return );
+    CHECK_OR(!rdm->errored, return);
 
     uint64_t value = 0;
     size_t hex_len = 0;
@@ -1058,7 +1059,7 @@ static void demangle_const_uint(struct rust_demangler *rdm, char ty_tag) {
         else if (c >= 'a' && c <= 'f')
             value |= 10 + (c - 'a');
         else
-            ERROR_AND(return );
+            ERROR_AND(return);
         hex_len++;
     }
 
@@ -1074,9 +1075,8 @@ static void demangle_const_uint(struct rust_demangler *rdm, char ty_tag) {
         PRINT(basic_type(ty_tag));
 }
 
-
 static void demangle_const_str_literal(struct rust_demangler *rdm) {
-    CHECK_OR(!rdm->errored, return );
+    CHECK_OR(!rdm->errored, return);
 
     PRINT("\"");
 
@@ -1090,7 +1090,7 @@ static void demangle_const_str_literal(struct rust_demangler *rdm) {
         else if (c >= 'a' && c <= 'f')
             value |= 10 + (c - 'a');
         else
-            ERROR_AND(return );
+            ERROR_AND(return);
 
         value <<= 4;
 
@@ -1100,7 +1100,7 @@ static void demangle_const_str_literal(struct rust_demangler *rdm) {
         else if (c >= 'a' && c <= 'f')
             value |= 10 + (c - 'a');
         else
-            ERROR_AND(return );
+            ERROR_AND(return);
 
         print_quoted_escaped_char(rdm, '"', value);
     }
@@ -1160,7 +1160,8 @@ bool rust_demangle_with_callback(
     demangle_path(&rdm, true);
 
     // Skip instantiating crate.
-    if (!rdm.errored && rdm.next < rdm.sym_len && peek(&rdm) >= 'A' && peek(&rdm) <= 'Z') {
+    if (!rdm.errored && rdm.next < rdm.sym_len && peek(&rdm) >= 'A' &&
+        peek(&rdm) <= 'Z') {
         rdm.skipping_printing = true;
         demangle_path(&rdm, false);
     }
