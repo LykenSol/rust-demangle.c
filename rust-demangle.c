@@ -1151,23 +1151,6 @@ bool rust_demangle_with_callback(
     const char *mangled, int flags,
     void (*callback)(const char *data, size_t len, void *opaque), void *opaque
 ) {
-    // Rust symbols always start with R, _R or __R.
-    if (mangled[0] == '_' && mangled[1] == 'R')
-        mangled += 2;
-    else if (mangled[0] == 'R')
-        // On Windows, dbghelp strips leading underscores, so we accept "R..."
-        // form too.
-        mangled += 1;
-    else if (mangled[0] == '_' && mangled[1] == '_' && mangled[2] == 'R')
-        // On OSX, symbols are prefixed with an extra _
-        mangled += 3;
-    else
-        return false;
-
-    // Paths always start with uppercase characters.
-    if (!IS_UPPER(mangled[0]))
-        return false;
-
     struct rust_demangler rdm;
 
     rdm.sym = mangled;
@@ -1180,11 +1163,32 @@ bool rust_demangle_with_callback(
     rdm.errored = false;
     rdm.skipping_printing = false;
     rdm.verbose = (flags & RUST_DEMANGLE_FLAG_VERBOSE) != 0;
-    rdm.version = 0;
+    rdm.version = -2; // Invalid version
     rdm.bound_lifetime_depth = 0;
 
+    // Rust symbols always start with R, _R or __R.
+    if (rdm.sym[0] == '_' && rdm.sym[1] == 'R') {
+        rdm.sym += 2;
+        rdm.version = 0;
+    } else if (rdm.sym[0] == 'R') {
+        // On Windows, dbghelp strips leading underscores, so we accept "R..."
+        // form too.
+        rdm.sym += 1;
+        rdm.version = 0;
+    } else if (rdm.sym[0] == '_' && rdm.sym[1] == '_' && rdm.sym[2] == 'R') {
+        // On OSX, symbols are prefixed with an extra _
+        rdm.sym += 3;
+        rdm.version = 0;
+    } else {
+        return false;
+    }
+
+    // Paths always start with uppercase characters.
+    if (!IS_UPPER(rdm.sym[0]))
+        return false;
+
     // Rust symbols only use ASCII characters.
-    for (const char *p = mangled; *p; p++) {
+    for (const char *p = rdm.sym; *p; p++) {
         if ((*p & 0x80) != 0)
             return false;
 
