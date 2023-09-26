@@ -5,7 +5,6 @@
 //! * `::` absolute paths -> `rust_demangle_c_test_harness::`
 //! * `#[cfg(unsupported_tests)]` was added to tests that couldn't compile
 //! * `#[ignore = "stack overflow"]` was added to tests that overflow the stack
-//! * Some tests have been split into a non-unicode and a unicode part
 //! * `#[should_panic]` was added to tests that don't pass yet
 
 use rust_demangle_c_test_harness::assert_contains;
@@ -105,12 +104,6 @@ fn demangle_min_const_generics() {
     t_const!("c76_", "'v'");
     t_const!("c22_", r#"'"'"#);
     t_const!("ca_", "'\\n'");
-}
-
-// FIXME(bjorn3) port the relevant functionality to C.
-#[should_panic]
-#[test]
-fn demangle_min_const_generics_unicode() {
     t_const!("c2202_", "'∂'");
 }
 
@@ -119,12 +112,6 @@ fn demangle_const_str() {
     t_const!("e616263_", "{*\"abc\"}");
     t_const!("e27_", r#"{*"'"}"#);
     t_const!("e090a_", "{*\"\\t\\n\"}");
-}
-
-// FIXME(bjorn3) port the relevant functionality to C.
-#[should_panic]
-#[test]
-fn demangle_const_str_unicode() {
     t_const!("ee28882c3bc_", "{*\"∂ü\"}");
     t_const!(
         "ee183a1e18390e183ade1839be18394e1839ae18390e183935fe18392e18394e1839b\
@@ -146,12 +133,6 @@ fn demangle_const_ref_str() {
     t_const!("Re616263_", "\"abc\"");
     t_const!("Re27_", r#""'""#);
     t_const!("Re090a_", "\"\\t\\n\"");
-}
-
-// FIXME(bjorn3) port the relevant functionality to C.
-#[should_panic]
-#[test]
-fn demangle_const_ref_unicode() {
     t_const!("Ree28882c3bc_", "\"∂ü\"");
     t_const!(
         "Ree183a1e18390e183ade1839be18394e1839ae18390e183935fe18392e18394e1839b\
