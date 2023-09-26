@@ -238,14 +238,20 @@ fn limit_recursion() {
 }
 
 // FIXME(eddyb) port the relevant functionality to C.
-#[should_panic]
+#[ignore = "would slowly use up all RAM before being OOM-killed"]
 #[test]
-fn limit_output() {
+fn limit_output_oom_hazard() {
     assert_ends_with!(
         rust_demangle_c_test_harness::demangle("RYFG_FGyyEvRYFF_EvRYFFEvERLB_B_B_ERLRjB_B_B_")
             .to_string(),
         "{size limit reached}"
     );
+}
+
+// FIXME(eddyb) port the relevant functionality to C.
+#[should_panic]
+#[test]
+fn limit_output() {
     // NOTE(eddyb) somewhat reduced version of the above, effectively
     // `<for<...> fn()>` with a larger number of lifetimes in `...`.
     assert_ends_with!(
