@@ -319,8 +319,11 @@ print_ident(struct rust_demangler *rdm, struct rust_mangled_ident ident) {
                     ident.ascii_len -= 1;
                 }
             } else if (ident.ascii[0] == '$') {
-                const char *end_ptr = (const char *)memchr(&ident.ascii[1], '$', ident.ascii_len - 1);
-                if (!end_ptr) break;
+                const char *end_ptr = (const char *)memchr(
+                    &ident.ascii[1], '$', ident.ascii_len - 1
+                );
+                if (!end_ptr)
+                    break;
                 const char *escape = &ident.ascii[1];
                 size_t escape_len = end_ptr - escape;
 
@@ -350,12 +353,14 @@ print_ident(struct rust_demangler *rdm, struct rust_mangled_ident ident) {
 
                     bool invalid = false;
                     for (size_t i = 1; i < digits_len; i++) {
-                        if (!IS_DIGIT(digits[i]) && !(digits[i] >= 'a' && digits[i] <= 'f')) {
+                        if (!IS_DIGIT(digits[i]) &&
+                            !(digits[i] >= 'a' && digits[i] <= 'f')) {
                             invalid = true;
                             break;
                         }
                     }
-                    if (invalid) break;
+                    if (invalid)
+                        break;
 
                     struct hex_nibbles hex;
 
@@ -366,7 +371,7 @@ print_ident(struct rust_demangler *rdm, struct rust_mangled_ident ident) {
                     for (size_t i = 0; i < hex.nibbles_len; i++)
                         c = (c << 4) | decode_hex_nibble(hex.nibbles[i]);
 
-                    if(!(c < 0xd800 || (c > 0xdfff && c < 0x10ffff))) {
+                    if (!(c < 0xd800 || (c > 0xdfff && c < 0x10ffff))) {
                         break; // Not a valid unicode scalar
                     }
 
@@ -375,7 +380,8 @@ print_ident(struct rust_demangler *rdm, struct rust_mangled_ident ident) {
                         char v = (char)c;
                         print_str(rdm, &v, 1);
                     } else {
-                        // FIXME show printable unicode characters without hex encoding
+                        // FIXME show printable unicode characters without hex
+                        // encoding
                         PRINT("\\u{");
                         char s[9] = {0};
                         sprintf(s, "%" PRIx32, c);
@@ -1267,7 +1273,8 @@ static bool is_rust_hash(struct rust_mangled_ident name) {
         return false;
     }
     for (size_t i = 1; i < name.ascii_len; i++) {
-        if (!IS_DIGIT(name.ascii[i]) && !(name.ascii[i] >= 'a' && name.ascii[i] <= 'f')) {
+        if (!IS_DIGIT(name.ascii[i]) &&
+            !(name.ascii[i] >= 'a' && name.ascii[i] <= 'f')) {
             return false;
         }
     }
@@ -1386,7 +1393,8 @@ bool rust_demangle_with_callback(
     if (!rdm.errored && (rdm.sym_len - rdm.next > 0)) {
         for (const char *p = rdm.sym + rdm.next; *p; p++) {
             // FIXME match is_symbol_like from rustc-demangle
-            if (!((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') || (*p >= '0' && *p <= '9') || *p == '.')) {
+            if (!((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') ||
+                  (*p >= '0' && *p <= '9') || *p == '.')) {
                 // Suffix is not a symbol like string
                 return false;
             }
