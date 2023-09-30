@@ -166,7 +166,10 @@ static struct rust_mangled_ident parse_ident(struct rust_demangler *rdm) {
     ident.punycode = NULL;
     ident.punycode_len = 0;
 
-    bool is_punycode = eat(rdm, 'u');
+    bool is_punycode = false;
+    if (rdm->version != -1) {
+        is_punycode = eat(rdm, 'u');
+    }
 
     char c = next(rdm);
     CHECK_OR(IS_DIGIT(c), return ident);
@@ -176,8 +179,10 @@ static struct rust_mangled_ident parse_ident(struct rust_demangler *rdm) {
         while (IS_DIGIT(peek(rdm)))
             len = len * 10 + (next(rdm) - '0');
 
-    // Skip past the optional `_` separator.
-    eat(rdm, '_');
+    if (rdm->version != -1) {
+        // Skip past the optional `_` separator.
+        eat(rdm, '_');
+    }
 
     size_t start = rdm->next;
     rdm->next += len;
@@ -291,6 +296,116 @@ static void
 print_ident(struct rust_demangler *rdm, struct rust_mangled_ident ident) {
     if (rdm->errored || rdm->skipping_printing)
         return;
+
+    if (rdm->version == -1) {
+        CHECK_OR(!ident.punycode, return);
+
+        if (ident.ascii[0] == '_' && ident.ascii[1] == '$') {
+            ident.ascii += 1;
+            ident.ascii_len -= 1;
+        }
+
+        while (1) {
+            if (ident.ascii_len == 0) {
+                break;
+            } else if (ident.ascii[0] == '.') {
+                if (ident.ascii_len >= 2 && ident.ascii[1] == '.') {
+                    PRINT("::");
+                    ident.ascii += 2;
+                    ident.ascii_len -= 2;
+                } else {
+                    PRINT(".");
+                    ident.ascii += 1;
+                    ident.ascii_len -= 1;
+                }
+            } else if (ident.ascii[0] == '$') {
+                const char *end_ptr = (const char *)memchr(&ident.ascii[1], '$', ident.ascii_len - 1);
+                if (!end_ptr) break;
+                const char *escape = &ident.ascii[1];
+                size_t escape_len = end_ptr - escape;
+
+                if (escape_len == 2 && escape[0] == 'S' && escape[1] == 'P') {
+                    PRINT("@");
+                } else if (escape_len == 2 && escape[0] == 'B' && escape[1] == 'P') {
+                    PRINT("*");
+                } else if (escape_len == 2 && escape[0] == 'R' && escape[1] == 'F') {
+                    PRINT("&");
+                } else if (escape_len == 2 && escape[0] == 'L' && escape[1] == 'T') {
+                    PRINT("<");
+                } else if (escape_len == 2 && escape[0] == 'G' && escape[1] == 'T') {
+                    PRINT(">");
+                } else if (escape_len == 2 && escape[0] == 'L' && escape[1] == 'P') {
+                    PRINT("(");
+                } else if (escape_len == 2 && escape[0] == 'R' && escape[1] == 'P') {
+                    PRINT(")");
+                } else if (escape_len == 1 && escape[0] == 'C') {
+                    PRINT(",");
+                } else {
+                    if (escape[0] != 'u') {
+                        break;
+                    }
+
+                    const char *digits = &escape[1];
+                    size_t digits_len = escape_len - 1;
+
+                    bool invalid = false;
+                    for (size_t i = 1; i < digits_len; i++) {
+                        if (!IS_DIGIT(digits[i]) && !(digits[i] >= 'a' && digits[i] <= 'f')) {
+                            invalid = true;
+                            break;
+                        }
+                    }
+                    if (invalid) break;
+
+                    struct hex_nibbles hex;
+
+                    hex.nibbles = digits;
+                    hex.nibbles_len = digits_len;
+
+                    uint32_t c = 0;
+                    for (size_t i = 0; i < hex.nibbles_len; i++)
+                        c = (c << 4) | decode_hex_nibble(hex.nibbles[i]);
+
+                    if(!(c < 0xd800 || (c > 0xdfff && c < 0x10ffff))) {
+                        break; // Not a valid unicode scalar
+                    }
+
+                    if (c >= 0x20 && c <= 0x7e) {
+                        // Printable ASCII
+                        char v = (char)c;
+                        print_str(rdm, &v, 1);
+                    } else {
+                        // FIXME show printable unicode characters without hex encoding
+                        PRINT("\\u{");
+                        char s[9] = {0};
+                        sprintf(s, "%" PRIx32, c);
+                        PRINT(s);
+                        PRINT("}");
+                    }
+                }
+
+                ident.ascii += escape_len + 2;
+                ident.ascii_len -= escape_len + 2;
+            } else {
+                bool found = false;
+                for (size_t i = 0; i < ident.ascii_len; i++) {
+                    if (ident.ascii[i] == '$' || ident.ascii[i] == '.') {
+                        print_str(rdm, ident.ascii, i);
+                        ident.ascii += i;
+                        ident.ascii_len -= i;
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    break;
+                }
+            }
+        }
+
+        print_str(rdm, ident.ascii, ident.ascii_len);
+        return;
+    }
 
     if (!ident.punycode) {
         print_str(rdm, ident.ascii, ident.ascii_len);
@@ -1147,6 +1262,46 @@ static void demangle_const_str_literal(struct rust_demangler *rdm) {
     PRINT("\"");
 }
 
+static bool is_rust_hash(struct rust_mangled_ident name) {
+    if (name.ascii[0] != 'h') {
+        return false;
+    }
+    for (size_t i = 1; i < name.ascii_len; i++) {
+        if (!IS_DIGIT(name.ascii[i]) && !(name.ascii[i] >= 'a' && name.ascii[i] <= 'f')) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static void demangle_legacy_path(struct rust_demangler *rdm) {
+    bool first = true;
+
+    while (1) {
+        if (eat(rdm, 'E')) {
+            // FIXME Maybe check if at end of symbol?
+            return;
+        }
+
+        struct rust_mangled_ident name = parse_ident(rdm);
+
+        if (!rdm->verbose && peek(rdm) == 'E' && is_rust_hash(name)) {
+            // Skip printing the hash if verbose mode is disabled.
+            eat(rdm, 'E');
+            break;
+        }
+
+        if (!first) {
+            PRINT("::");
+        }
+        first = false;
+
+        print_ident(rdm, name); // FIXME handle things like $LT$
+
+        CHECK_OR(!rdm->errored, return);
+    }
+}
+
 bool rust_demangle_with_callback(
     const char *mangled, int flags,
     void (*callback)(const char *data, size_t len, void *opaque), void *opaque
@@ -1166,26 +1321,41 @@ bool rust_demangle_with_callback(
     rdm.version = -2; // Invalid version
     rdm.bound_lifetime_depth = 0;
 
-    // Rust symbols always start with R, _R or __R.
+    // Rust symbols always start with R, _R or __R for the v0 scheme or ZN, _ZN
+    // or __ZN for the legacy scheme.
     if (rdm.sym[0] == '_' && rdm.sym[1] == 'R') {
         rdm.sym += 2;
-        rdm.version = 0;
+        rdm.version = 0; // v0
     } else if (rdm.sym[0] == 'R') {
         // On Windows, dbghelp strips leading underscores, so we accept "R..."
         // form too.
         rdm.sym += 1;
-        rdm.version = 0;
+        rdm.version = 0; // v0
     } else if (rdm.sym[0] == '_' && rdm.sym[1] == '_' && rdm.sym[2] == 'R') {
         // On OSX, symbols are prefixed with an extra _
         rdm.sym += 3;
-        rdm.version = 0;
+        rdm.version = 0; // v0
+    } else if (rdm.sym[0] == '_' && rdm.sym[1] == 'Z' && rdm.sym[2] == 'N') {
+        rdm.sym += 3;
+        rdm.version = -1; // legacy
+    } else if (rdm.sym[0] == 'Z' && rdm.sym[1] == 'N') {
+        // On Windows, dbghelp strips leading underscores, so we accept "R..."
+        // form too.
+        rdm.sym += 2;
+        rdm.version = -1; // legacy
+    } else if (rdm.sym[0] == '_' && rdm.sym[1] == '_' && rdm.sym[2] == 'Z' && rdm.sym[3] == 'N') {
+        // On OSX, symbols are prefixed with an extra _
+        rdm.sym += 4;
+        rdm.version = -1; // legacy
     } else {
         return false;
     }
 
-    // Paths always start with uppercase characters.
-    if (!IS_UPPER(rdm.sym[0]))
-        return false;
+    if (rdm.version != -1) {
+        // Paths always start with uppercase characters.
+        if (!IS_UPPER(rdm.sym[0]))
+            return false;
+    }
 
     // Rust symbols only use ASCII characters.
     for (const char *p = rdm.sym; *p; p++) {
@@ -1200,17 +1370,31 @@ bool rust_demangle_with_callback(
         rdm.sym_len++;
     }
 
-    demangle_path(&rdm, true);
+    if (rdm.version == -1) {
+        demangle_legacy_path(&rdm);
+    } else {
+        demangle_path(&rdm, true);
 
-    // Skip instantiating crate.
-    if (!rdm.errored && rdm.next < rdm.sym_len && peek(&rdm) >= 'A' &&
-        peek(&rdm) <= 'Z') {
-        rdm.skipping_printing = true;
-        demangle_path(&rdm, false);
+        // Skip instantiating crate.
+        if (!rdm.errored && rdm.next < rdm.sym_len && peek(&rdm) >= 'A' &&
+            peek(&rdm) <= 'Z') {
+            rdm.skipping_printing = true;
+            demangle_path(&rdm, false);
+        }
     }
 
-    // Print trailing garbage
-    print_str(&rdm, rdm.sym + rdm.next, rdm.sym_len - rdm.next);
+    if (!rdm.errored && (rdm.sym_len - rdm.next > 0)) {
+        for (const char *p = rdm.sym + rdm.next; *p; p++) {
+            // FIXME match is_symbol_like from rustc-demangle
+            if (!((*p >= 'a' && *p <= 'z') || (*p >= 'A' && *p <= 'Z') || (*p >= '0' && *p <= '9') || *p == '.')) {
+                // Suffix is not a symbol like string
+                return false;
+            }
+        }
+
+        // Print LLVM produced suffix
+        print_str(&rdm, rdm.sym + rdm.next, rdm.sym_len - rdm.next);
+    }
 
     return !rdm.errored;
 }

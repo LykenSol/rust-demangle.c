@@ -18,7 +18,7 @@ As this C port was originally (see the [History](#history) section) *only* for t
 it may lag behind `rustc-demangle` in functionality, for now.
 
 The current port status by category is:
-* **(UNPORTED)** `legacy` (pre-RFC2603 Rust symbols) demangling
+* **ported** `legacy` (pre-RFC2603 Rust symbols) demangling
 * `v0` ([RFC2603](https://rust-lang.github.io/rfcs/2603-rust-symbol-name-mangling-v0.html) Rust symbols) demangling
   * **ported** PRs:
     * [[#23] Support demangling the new Rust mangling scheme (v0).](https://github.com/rust-lang/rustc-demangle/pull/23)
