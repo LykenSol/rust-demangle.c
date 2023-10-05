@@ -1199,21 +1199,21 @@ static void print_legacy_ident(
             const char *escape = &ident.ascii[1];
             size_t escape_len = end_ptr - escape;
 
-            if (strncmp(escape, "SP", escape_len)  == 0) {
+            if (strncmp(escape, "SP", 2)  == 0) {
                 PRINT("@");
-            } else if (strncmp(escape, "BP", escape_len)  == 0) {
+            } else if (strncmp(escape, "BP", 2)  == 0) {
                 PRINT("*");
-            } else if (strncmp(escape, "RF", escape_len)  == 0) {
+            } else if (strncmp(escape, "RF", 2)  == 0) {
                 PRINT("&");
-            } else if (strncmp(escape, "LT", escape_len)  == 0) {
+            } else if (strncmp(escape, "LT", 2)  == 0) {
                 PRINT("<");
-            } else if (strncmp(escape, "GT", escape_len)  == 0) {
+            } else if (strncmp(escape, "GT", 2)  == 0) {
                 PRINT(">");
-            } else if (strncmp(escape, "LP", escape_len)  == 0) {
+            } else if (strncmp(escape, "LP", 2)  == 0) {
                 PRINT("(");
-            } else if (strncmp(escape, "RP", escape_len)  == 0) {
+            } else if (strncmp(escape, "RP", 2)  == 0) {
                 PRINT(")");
-            } else if (strncmp(escape, "C", escape_len)  == 0) {
+            } else if (strncmp(escape, "C", 1)  == 0) {
                 PRINT(",");
             } else {
                 if (escape[0] != 'u') {
