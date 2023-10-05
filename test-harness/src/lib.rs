@@ -54,7 +54,7 @@ pub fn try_demangle(s: &str) -> Result<Demangle<'_>, rustc_demangle::TryDemangle
             rustc_demangle: d,
         }),
         Err(e) => {
-            assert!(!demangle_via_c(s, false).1);
+            assert!(demangle_via_c(s, false).is_err());
 
             Err(e)
         }
@@ -104,7 +104,7 @@ impl Demangle<'_> {
         } else {
             format!("{:#}", self.rustc_demangle)
         };
-        let c = demangle_via_c(self.original, verbose).0;
+        let c = demangle_via_c(self.original, verbose).unwrap_or_else(|_| self.original.to_owned());
         if rust != c && !equal_modulo_unicode_escapes(&rust, &c) {
             panic!(
                 "Rust vs C demangling difference:\
@@ -120,7 +120,7 @@ impl Demangle<'_> {
     }
 }
 
-fn demangle_via_c(mangled: &str, verbose: bool) -> (String, bool) {
+fn demangle_via_c(mangled: &str, verbose: bool) -> Result<String, ()> {
     use std::ffi::{CStr, CString};
     use std::os::raw::c_char;
 
@@ -130,18 +130,18 @@ fn demangle_via_c(mangled: &str, verbose: bool) -> (String, bool) {
     }
 
     let flags = if verbose { 1 } else { 0 };
-    let Ok(mangled_cstr) = CString::new(mangled) else {
+    let Ok(mangled) = CString::new(mangled) else {
         // C can't handle strings containing nul bytes
-        return (mangled.to_owned(), false);
+        return Err(());
     };
-    let out = unsafe { rust_demangle(mangled_cstr.as_ptr(), flags) };
+    let out = unsafe { rust_demangle(mangled.as_ptr(), flags) };
     if out.is_null() {
-        (mangled.to_owned(), false)
+        Err(())
     } else {
         unsafe {
             let s = CStr::from_ptr(out).to_string_lossy().into_owned();
             free(out);
-            (s, true)
+            Ok(s)
         }
     }
 }
