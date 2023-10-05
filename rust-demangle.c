@@ -1333,7 +1333,7 @@ bool rust_demangle_with_callback(
 
     // Rust symbols always start with R, _R or __R for the v0 scheme or ZN, _ZN
     // or __ZN for the legacy scheme.
-    if (rdm.sym[0] == '_' && rdm.sym[1] == 'R') {
+    if (strncmp(rdm.sym, "_R", 2) == 0) {
         rdm.sym += 2;
         rdm.version = 0; // v0
     } else if (rdm.sym[0] == 'R') {
@@ -1341,19 +1341,19 @@ bool rust_demangle_with_callback(
         // form too.
         rdm.sym += 1;
         rdm.version = 0; // v0
-    } else if (rdm.sym[0] == '_' && rdm.sym[1] == '_' && rdm.sym[2] == 'R') {
+    } else if (strncmp(rdm.sym, "__R", 3) == 0) {
         // On OSX, symbols are prefixed with an extra _
         rdm.sym += 3;
         rdm.version = 0; // v0
-    } else if (rdm.sym[0] == '_' && rdm.sym[1] == 'Z' && rdm.sym[2] == 'N') {
+    } else if (strncmp(rdm.sym, "_ZN", 3) == 0) {
         rdm.sym += 3;
         rdm.version = -1; // legacy
-    } else if (rdm.sym[0] == 'Z' && rdm.sym[1] == 'N') {
+    } else if (strncmp(rdm.sym, "ZN", 2) == 0) {
         // On Windows, dbghelp strips leading underscores, so we accept "R..."
         // form too.
         rdm.sym += 2;
         rdm.version = -1; // legacy
-    } else if (rdm.sym[0] == '_' && rdm.sym[1] == '_' && rdm.sym[2] == 'Z' && rdm.sym[3] == 'N') {
+    } else if (strncmp(rdm.sym, "__ZN", 4) == 0) {
         // On OSX, symbols are prefixed with an extra _
         rdm.sym += 4;
         rdm.version = -1; // legacy
