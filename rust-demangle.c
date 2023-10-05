@@ -1313,12 +1313,12 @@ static void demangle_legacy_path(struct rust_demangler *rdm) {
 }
 
 bool rust_demangle_with_callback(
-    const char *mangled, int flags,
+    const char *whole_mangled_symbol, int flags,
     void (*callback)(const char *data, size_t len, void *opaque), void *opaque
 ) {
     struct rust_demangler rdm;
 
-    rdm.sym = mangled;
+    rdm.sym = whole_mangled_symbol;
     rdm.sym_len = 0;
 
     rdm.callback_opaque = opaque;
