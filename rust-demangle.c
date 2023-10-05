@@ -1199,21 +1199,21 @@ static void print_legacy_ident(
             const char *escape = &ident.ascii[1];
             size_t escape_len = end_ptr - escape;
 
-            if (escape_len == 2 && escape[0] == 'S' && escape[1] == 'P') {
+            if (strncmp(escape, "SP", escape_len)  == 0) {
                 PRINT("@");
-            } else if (escape_len == 2 && escape[0] == 'B' && escape[1] == 'P') {
+            } else if (strncmp(escape, "BP", escape_len)  == 0) {
                 PRINT("*");
-            } else if (escape_len == 2 && escape[0] == 'R' && escape[1] == 'F') {
+            } else if (strncmp(escape, "RF", escape_len)  == 0) {
                 PRINT("&");
-            } else if (escape_len == 2 && escape[0] == 'L' && escape[1] == 'T') {
+            } else if (strncmp(escape, "LT", escape_len)  == 0) {
                 PRINT("<");
-            } else if (escape_len == 2 && escape[0] == 'G' && escape[1] == 'T') {
+            } else if (strncmp(escape, "GT", escape_len)  == 0) {
                 PRINT(">");
-            } else if (escape_len == 2 && escape[0] == 'L' && escape[1] == 'P') {
+            } else if (strncmp(escape, "LP", escape_len)  == 0) {
                 PRINT("(");
-            } else if (escape_len == 2 && escape[0] == 'R' && escape[1] == 'P') {
+            } else if (strncmp(escape, "RP", escape_len)  == 0) {
                 PRINT(")");
-            } else if (escape_len == 1 && escape[0] == 'C') {
+            } else if (strncmp(escape, "C", escape_len)  == 0) {
                 PRINT(",");
             } else {
                 if (escape[0] != 'u') {
